@@ -40,4 +40,5 @@ jobs:
     - name: copy builds to server
       run: |
           rsync -vrm  target/x86_64-unknown-linux-gnu/release/link_expander ${{ secrets.USER_IP }}:/var/www/bin/
-          sudo systemctl restart linkexpander.service
+          ssh ${{ secrets.USER_IP }} "sudo systemctl restart linkexpander.service"
+
