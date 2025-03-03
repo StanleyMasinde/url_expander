@@ -9,15 +9,12 @@ use hyper_util::rt::TokioIo;
 use reqwest::{header, Client};
 use tokio::net::TcpListener;
 
-async fn hello(
+async fn handle_expansion(
     req: Request<hyper::body::Incoming>,
 ) -> Result<Response<BoxBody<Bytes, Error>>, Error> {
     match (req.method(), req.uri().path()) {
         (&Method::GET, "/") => {
-            let query = match req.uri().query() {
-                Some(search_params) => search_params,
-                None => todo!(),
-            };
+            let query = req.uri().query().unwrap_or("");
 
             let params: Vec<(String, String)> = url::form_urlencoded::parse(query.as_bytes())
                 .into_owned()
@@ -29,18 +26,29 @@ async fn hello(
                 url_param = value.to_string()
             }
 
-            let mut expanded_url = "NA".to_string();
+            let mut expanded_url = "".to_string();
 
             // We can visit the upstream URL
             if !url_param.is_empty() {
                 let parsed_url = url_param.parse::<hyper::Uri>().unwrap();
                 expanded_url = match follow_endpoint(parsed_url.to_string()).await {
                     Ok(ok_res) => ok_res,
-                    Err(err) => {
-                        println!("{}", err);
-                        String::from("NA")
-                    }
+                    Err(_err) => "err".to_string(),
                 };
+            }
+
+            if expanded_url.is_empty() {
+                let mut bad_request = Response::new(full("URL param missing!"));
+                *bad_request.status_mut() = StatusCode::BAD_REQUEST;
+
+                return Ok(bad_request);
+            }
+
+            if expanded_url == "err" {
+                let mut unproceacable = Response::new(full("Invalid URL"));
+                *unproceacable.status_mut() = StatusCode::UNPROCESSABLE_ENTITY;
+
+                return Ok(unproceacable);
             }
 
             Ok(Response::new(full(expanded_url.to_string())))
@@ -55,7 +63,7 @@ async fn hello(
 
 async fn follow_endpoint(endpoint: String) -> Result<String, Box<dyn std::error::Error>> {
     let client = Client::builder()
-        .redirect(reqwest::redirect::Policy::limited(10)) // Follow up to 10 redirects
+        .redirect(reqwest::redirect::Policy::limited(10))
         .build()?;
 
     let resp = client.get(endpoint)
@@ -99,7 +107,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             // Finally, we bind the incoming connection to our `hello` service
             match http1::Builder::new()
                 // `service_fn` converts our function in a `Service`
-                .serve_connection(io, service_fn::<_, _, _>(hello))
+                .serve_connection(io, service_fn::<_, _, _>(handle_expansion))
                 .await
             {
                 Err(err) => {
