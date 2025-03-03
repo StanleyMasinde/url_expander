@@ -1,6 +1,6 @@
 pub mod expander;
 
-use std::net::SocketAddr;
+use std::{env::args, net::SocketAddr};
 
 use hyper::{server::conn::http1, service::service_fn};
 use hyper_util::rt::TokioIo;
@@ -8,7 +8,11 @@ use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    let args: Vec<String> = args().collect();
+    let binding = "3000".to_string();
+    let port = args.get(1).unwrap_or(&binding);
+
+    let addr = SocketAddr::from(([127, 0, 0, 1], port.parse().unwrap()));
 
     let listener = TcpListener::bind(addr).await?;
 
