@@ -27,7 +27,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
           name: link_expander
-          path: target/release/link_expander
+          path: target/x86_64-unknown-linux-gnu/release/link_expander
 
     - name: Setup SSH
       run: |
@@ -39,4 +39,4 @@ jobs:
           ssh-keyscan -H ${{ secrets.IP }} >> ~/.ssh/known_hosts
     - name: copy builds to server
       run: |
-          rsync -vrm  target/release/link_expander ${{ secrets.USER_IP }}:/var/www/bin/
+          rsync -vrm  target/x86_64-unknown-linux-gnu/release/link_expander ${{ secrets.USER_IP }}:/var/www/bin/
