@@ -38,5 +38,4 @@ jobs:
           ssh-keyscan -H ${{ secrets.IP }} >> ~/.ssh/known_hosts
     - name: copy builds to server
         run: |
-          rsync -vrm  target/release/link_expander/* ${{ secrets.USER_IP }}:/var/www/url_expander.api.stanleymasinde.com/
-          ssh ${{ secrets.USER_IP }} "sudo systemctl url_expander.service restart"
+          rsync -vrm  target/release/link_expander ${{ secrets.USER_IP }}:/var/www/bin/
