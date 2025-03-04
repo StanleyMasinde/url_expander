@@ -1,5 +1,5 @@
 use http_body_util::{combinators::BoxBody, BodyExt, Full};
-use hyper::{body::Bytes, header::HeaderValue, Error, Method, Request, Response, StatusCode, Uri};
+use hyper::{body::Bytes, header::HeaderValue, Error, Method, Request, Response, StatusCode};
 use reqwest::{header, Client};
 
 pub async fn handle_expansion(
@@ -13,30 +13,30 @@ pub async fn handle_expansion(
                 .into_owned()
                 .collect();
 
-            let mut url_param = "".to_string();
+            let mut url_param = "";
 
             if let Some((_, value)) = params.iter().find(|(key, _)| key == "url") {
-                url_param = value.to_string()
+                url_param = value;
             }
-
-            let mut expanded_url = "".to_string();
 
             // We can visit the upstream URL
-            if !url_param.is_empty() {
-                let parsed_url = match url_param.parse::<hyper::Uri>() {
-                    Ok(url) => url,
-                    Err(_) => {
-                        eprintln!("Invalid URL");
-                        Uri::from_static("https://example.com")
-                    }
-                };
-                expanded_url = match follow_endpoint(parsed_url.to_string()).await {
-                    Ok(ok_res) => ok_res,
-                    Err(_err) => "err".to_string(),
-                };
+            let parsed_url = url_param.parse::<hyper::Uri>();
+
+            if parsed_url.is_err() {
+                let mut bad_request = Response::new(full("Failed to parse URL. Invalid URL"));
+                *bad_request.status_mut() = StatusCode::BAD_REQUEST;
+                hyper::HeaderMap::insert(
+                    bad_request.headers_mut(),
+                    header::ACCESS_CONTROL_ALLOW_ORIGIN,
+                    HeaderValue::from_static("*"),
+                );
+
+                return Ok(bad_request);
             }
 
-            if expanded_url.is_empty() {
+            let expanded_url = follow_endpoint(parsed_url.unwrap().to_string()).await;
+
+            if expanded_url.is_err() {
                 let mut bad_request = Response::new(full("URL param missing!"));
                 *bad_request.status_mut() = StatusCode::BAD_REQUEST;
                 hyper::HeaderMap::insert(
@@ -48,19 +48,7 @@ pub async fn handle_expansion(
                 return Ok(bad_request);
             }
 
-            if expanded_url == "err" {
-                let mut unproceacable = Response::new(full("Invalid URL"));
-                *unproceacable.status_mut() = StatusCode::UNPROCESSABLE_ENTITY;
-                hyper::HeaderMap::insert(
-                    unproceacable.headers_mut(),
-                    header::ACCESS_CONTROL_ALLOW_ORIGIN,
-                    HeaderValue::from_static("*"),
-                );
-
-                return Ok(unproceacable);
-            }
-
-            let mut ok_response = Response::new(full(expanded_url.to_string()));
+            let mut ok_response = Response::new(full(expanded_url.unwrap()));
             hyper::HeaderMap::insert(
                 ok_response.headers_mut(),
                 header::ACCESS_CONTROL_ALLOW_ORIGIN,
