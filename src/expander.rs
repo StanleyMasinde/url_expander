@@ -1,9 +1,5 @@
 use http_body_util::{combinators::BoxBody, BodyExt, Full};
-use hyper::{
-    body::Bytes,
-    header::{HeaderName, HeaderValue},
-    Error, Method, Request, Response, StatusCode,
-};
+use hyper::{body::Bytes, header::HeaderValue, Error, Method, Request, Response, StatusCode};
 use reqwest::{header, Client};
 
 pub async fn handle_expansion(
