@@ -11,4 +11,6 @@ Please do not deploy this in production. I am doing this to practice Rust. This 
 This can easily be be written in Node.js in less than 50 lines. I recoomend that. 
 
 ### Is this deployed anywhere? 
-Yes is is part of my [Lnky](https://github.com/StanleyMasinde/Lnky) project. This is what's response for expandinf short links like bt.ly. 
+Yes is is part of my [Lnky](https://github.com/StanleyMasinde/Lnky) project. This is what's response for expanding short links like bit.ly.
+
+Last update: 2025-03-05 13:59 UTC+3
