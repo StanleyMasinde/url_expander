@@ -1,5 +1,9 @@
 use http_body_util::{combinators::BoxBody, BodyExt, Full};
-use hyper::{body::Bytes, header::HeaderValue, Error, Method, Request, Response, StatusCode};
+use hyper::{
+    body::Bytes,
+    header::{HeaderName, HeaderValue},
+    Error, Method, Request, Response, StatusCode,
+};
 use reqwest::{header, Client};
 
 pub async fn handle_expansion(
@@ -66,16 +70,13 @@ pub async fn handle_expansion(
 }
 
 async fn follow_endpoint(endpoint: String) -> Result<String, Box<dyn std::error::Error>> {
-    let client = Client::builder()
-        .redirect(reqwest::redirect::Policy::limited(10))
-        .build()?;
+    let client = Client::builder().build()?;
 
-    let resp = client.get(endpoint)
-        .header(header::USER_AGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-        .header(header::ACCEPT, "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-        .header(header::ACCEPT_LANGUAGE, "en-US,en;q=0.5")
-        .header(header::REFERER, "https://www.google.com/")
-        .send().await?;
+    let resp = client
+        .get(endpoint)
+        .header(header::USER_AGENT, "curl/8.7.1")
+        .send()
+        .await?;
 
     Ok(resp.url().clone().to_string())
 }
