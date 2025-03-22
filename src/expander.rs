@@ -70,6 +70,12 @@ pub async fn handle_expansion(
     }
 }
 
+/// Follows redirects and returns the final resolved URL as a `String`.
+///
+/// For example, `https://youtu.be/...` will return `https://www.youtube.com/...`
+///
+/// # Errors
+/// Returns an error if the request fails or the URL cannot be resolved.
 async fn follow_endpoint(endpoint: String) -> Result<String, Box<dyn std::error::Error>> {
     let client = Client::builder().build()?;
 
@@ -82,6 +88,7 @@ async fn follow_endpoint(endpoint: String) -> Result<String, Box<dyn std::error:
     Ok(resp.url().clone().to_string())
 }
 
+/// Return 404 not found response
 fn empty(path: &str) -> BoxBody<Bytes, Error> {
     Full::new(Bytes::from(format!(
         "Resource {} not found on this server. That's all we know.",
@@ -90,6 +97,8 @@ fn empty(path: &str) -> BoxBody<Bytes, Error> {
     .map_err(|never| match never {})
     .boxed()
 }
+
+/// Return full response a 200
 fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, Error> {
     Full::new(chunk.into())
         .map_err(|never| match never {})
