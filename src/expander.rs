@@ -13,10 +13,14 @@ pub async fn handle_expansion(
                 .into_owned()
                 .collect();
 
-            let mut url_param = "";
+            let mut url_param = String::from("https://example.com");
 
             if let Some((_, value)) = params.iter().find(|(key, _)| key == "url") {
-                url_param = value;
+                if value.starts_with("http") {
+                    url_param = value.to_string();
+                } else {
+                    url_param = String::from("https://") + value
+                }
             }
 
             // We can visit the upstream URL
