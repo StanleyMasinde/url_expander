@@ -16,10 +16,11 @@ pub async fn handle_expansion(
             let mut url_param = String::from("https://example.com");
 
             if let Some((_, value)) = params.iter().find(|(key, _)| key == "url") {
+                let trimmed_val = value.trim();
                 if value.starts_with("http") {
-                    url_param = value.to_string();
+                    url_param = trimmed_val.to_string();
                 } else {
-                    url_param = String::from("https://") + value
+                    url_param = String::from("https://") + trimmed_val
                 }
             }
 
