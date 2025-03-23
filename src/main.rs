@@ -9,7 +9,7 @@ use tokio::{net::TcpListener, sync::Semaphore};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let args: Vec<String> = args().collect();
-    let binding = "3000".to_string();
+    let binding = String::from("3000");
     let port = args.get(1).unwrap_or(&binding);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port.parse().unwrap()));
