@@ -1,10 +1,10 @@
 pub mod expander;
 
-use std::{env::args, net::SocketAddr, sync::Arc};
+use std::{env::args, net::SocketAddr};
 
 use hyper::{server::conn::http1, service::service_fn};
 use hyper_util::rt::TokioIo;
-use tokio::{net::TcpListener, sync::Semaphore};
+use tokio::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -16,18 +16,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let listener = TcpListener::bind(addr).await?;
 
-    let semaphore = Arc::new(Semaphore::new(100));
-
     println!("Server running on http://localhost:{}", addr.port());
 
     loop {
         let (stream, _) = listener.accept().await?;
 
         let io = TokioIo::new(stream);
-        let permit = semaphore.clone().acquire_owned().await.unwrap();
 
         tokio::task::spawn(async move {
-            let _permit = permit; // Dropping it releases the slot
             if let Err(err) = http1::Builder::new()
                 .serve_connection(io, service_fn::<_, _, _>(expander::handle_expansion))
                 .await
