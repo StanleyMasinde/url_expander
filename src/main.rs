@@ -12,7 +12,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let binding = String::from("3000");
     let port = args.get(1).unwrap_or(&binding);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], port.parse().unwrap()));
+    let port_number = port
+        .parse::<u16>()
+        .map_err(|e| format!("The port has to be a number: {:?}", e))?;
+
+    let addr = SocketAddr::from(([127, 0, 0, 1], port_number));
 
     let listener = TcpListener::bind(addr).await?;
 
