@@ -4,6 +4,7 @@ use reqwest::{header, Client};
 
 pub async fn handle_expansion(
     req: Request<hyper::body::Incoming>,
+    client: Client,
 ) -> Result<Response<BoxBody<Bytes, Error>>, Error> {
     match (req.method(), req.uri().path()) {
         (&Method::GET, "/") => {
@@ -39,7 +40,6 @@ pub async fn handle_expansion(
                 return Ok(bad_request);
             }
 
-            let client = Client::builder().build().unwrap();
             let expanded_url = follow_endpoint(parsed_url.unwrap().to_string(), client).await;
 
             if expanded_url.is_err() {
