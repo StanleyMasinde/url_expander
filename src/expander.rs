@@ -39,7 +39,8 @@ pub async fn handle_expansion(
                 return Ok(bad_request);
             }
 
-            let expanded_url = follow_endpoint(parsed_url.unwrap().to_string()).await;
+            let client = Client::builder().build().unwrap();
+            let expanded_url = follow_endpoint(parsed_url.unwrap().to_string(), client).await;
 
             if expanded_url.is_err() {
                 let mut bad_request = Response::new(full("URL param missing!"));
@@ -76,9 +77,10 @@ pub async fn handle_expansion(
 ///
 /// # Errors
 /// Returns an error if the request fails or the URL cannot be resolved.
-async fn follow_endpoint(endpoint: String) -> Result<String, Box<dyn std::error::Error>> {
-    let client = Client::builder().build()?;
-
+async fn follow_endpoint(
+    endpoint: String,
+    client: Client,
+) -> Result<String, Box<dyn std::error::Error>> {
     let resp = client
         .get(endpoint)
         .header(header::USER_AGENT, "curl/8.7.1")
