@@ -19,7 +19,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port_number));
 
-    let listener = TcpListener::bind(addr).await?;
+    let listener = TcpListener::bind(addr)
+        .await
+        .map_err(|e| format!("Failed to bind to port {}", e))?;
 
     println!("Server running on http://localhost:{}", addr.port());
 
