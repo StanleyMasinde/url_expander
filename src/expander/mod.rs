@@ -40,7 +40,7 @@ pub async fn handle_expansion(
 
             let expanded_url = follow_endpoint(parsed_url.unwrap().to_string(), client).await;
 
-            build_response(StatusCode::BAD_REQUEST, expanded_url.unwrap())
+            build_response(StatusCode::OK, expanded_url.unwrap())
         }
         _ => build_response(StatusCode::NOT_FOUND, String::from("Resource not found")),
     }
@@ -62,5 +62,5 @@ async fn follow_endpoint(
         .send()
         .await?;
 
-    Ok(resp.url().clone().to_string())
+    Ok(resp.url().to_string())
 }
