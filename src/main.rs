@@ -25,14 +25,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("Server running on http://localhost:{}", addr.port());
 
     let client_r = Client::builder().build().unwrap();
+    let http_builder = http1::Builder::new();
 
     loop {
         let (stream, _) = listener.accept().await?;
         let io = TokioIo::new(stream);
-        let client = client_r.clone(); // ← each task gets its own ref
+        let client = client_r.clone(); 
+        let http_builder_ref = http_builder.clone();
 
         tokio::task::spawn(async move {
-            if let Err(err) = http1::Builder::new()
+            if let Err(err) = http_builder_ref
                 .serve_connection(
                     io,
                     service_fn(move |svc| expander::handle_expansion(svc, client.clone())),
