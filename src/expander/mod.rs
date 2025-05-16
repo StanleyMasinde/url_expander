@@ -1,7 +1,9 @@
 pub mod response;
 
 use http_body_util::combinators::BoxBody;
-use hyper::{Error, Method, Request, Response, StatusCode, body::Bytes};
+use hyper::{
+    Error, HeaderMap, Method, Request, Response, StatusCode, body::Bytes, header::HeaderValue,
+};
 use rand::{rng, seq::IndexedRandom};
 use reqwest::{Client, header};
 use response::build_response;
@@ -79,11 +81,8 @@ async fn follow_endpoint(
     endpoint: String,
     client: Client,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let resp = client
-        .get(endpoint)
-        .header(header::USER_AGENT, "curl/8.7.1")
-        .send()
-        .await?;
+    let headers = build_headers(&endpoint);
+    let resp = client.get(endpoint).headers(headers).send().await?;
 
     Ok(resp.url().to_string())
 }
@@ -92,38 +91,69 @@ async fn return_preview_html(
     endpoint: String,
     client: Client,
 ) -> Result<String, Box<dyn std::error::Error>> {
-    let user_agents = [
-        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/27.0 Chrome/125.0.0.0 Mobile Safari/537.36",
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.6099.119 Mobile/15E148 Safari/604.1",
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) EdgiOS/123.0.2420.56 Version/18.0 Mobile/15E148 Safari/604.1",
-        "Mozilla/5.0 (Linux; Android 13; Redmi Note 12) AppleWebKit/537.36 (KHTML, like Gecko) Vivaldi/122.0 Mobile Safari/537.36",
-        "Mozilla/5.0 (Linux; Android 10; HarmonyOS; BAH4-W09; HMSCore 6.15.0.302) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.93 HuaweiBrowser/11.1.2.332 Safari/537.36",
-        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.6099.119 Mobile/15E148 Safari/604.1",
-        "Mozilla/5.0 (Linux; Android 9; Infinix X653C Build/PPR1.180610.011) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.146 Mobile Safari/537.36",
-        "Mozilla/5.0 (Linux; Android 12; V2234) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/87.0.4280.141 Mobile Safari/537.36 VivoBrowser/9.3.8.1",
-    ];
+    let headers = build_headers(&endpoint);
+    let res = client.get(endpoint).headers(headers).send().await?;
 
-    let user_agent = if endpoint.contains("facebook.com") || endpoint.contains("instagram.com") {
+    let html = res.text().await?;
+
+    Ok(html)
+}
+
+/// .
+/// Randomize user agent
+/// # Panics
+///
+/// Panics if .
+fn randomize_user_agent(endpoint: &str) -> String {
+    let user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.5672.126 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edg/113.0.1774.50 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.5672.126 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.5672.126 Safari/537.36",
+        "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/113.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Safari/605.1.15",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/113.0",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.5005.63 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 11_2_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Brave/113.0.5672.126 Chrome/113.0.5672.126 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Vivaldi/5.6.2867.58 Chrome/113.0.5672.126 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.3 Safari/605.1.15",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:93.0) Gecko/20100101 Firefox/93.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Opera/80.0.4170.63 Safari/537.36",
+    ];
+    if endpoint.contains("facebook.com") || endpoint.contains("instagram.com") {
         "curl/8.7.1".to_string()
     } else {
         let mut rng = rng();
         let random_user_agent = user_agents.choose(&mut rng).unwrap();
         random_user_agent.to_string()
-    };
+    }
+}
 
-    let res = client
-        .get(endpoint)
-        .header(header::USER_AGENT, user_agent)
-        .header(
-            header::ACCEPT,
+/// .
+/// Return the headers to be used
+/// # Panics
+///
+/// Panics if .
+fn build_headers(endpoint: &str) -> hyper::HeaderMap {
+    let user_agent = randomize_user_agent(endpoint);
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        header::USER_AGENT,
+        HeaderValue::from_str(&user_agent).expect("Invalid user agent"),
+    );
+    headers.insert(
+        header::ACCEPT,
+        HeaderValue::from_static(
             "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        )
-        .header(header::ACCEPT_LANGUAGE, "en-US,en;q=0.9")
-        .header(header::ACCEPT_ENCODING, "gzip, deflate, br")
-        .send()
-        .await?;
+        ),
+    );
+    headers.insert(
+        header::ACCEPT_LANGUAGE,
+        HeaderValue::from_static("en-US,en;q=0.5"),
+    );
+    headers.insert("Cache-Control", HeaderValue::from_static("no-cache"));
 
-    let html = res.text().await?;
-
-    Ok(html)
+    headers
 }
