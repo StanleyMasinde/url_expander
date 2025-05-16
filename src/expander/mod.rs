@@ -114,6 +114,12 @@ async fn return_preview_html(
     let res = client
         .get(endpoint)
         .header(header::USER_AGENT, user_agent)
+        .header(
+            header::ACCEPT,
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        )
+        .header(header::ACCEPT_LANGUAGE, "en-US,en;q=0.9")
+        .header(header::ACCEPT_ENCODING, "gzip, deflate, br")
         .send()
         .await?;
 

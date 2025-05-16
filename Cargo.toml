@@ -9,5 +9,5 @@ tokio = { version = "1", features = ["full"] }
 http-body-util = "0.1"
 hyper-util = { version = "0.1", features = ["full"] }
 url = "2.5.4"
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.12", features = ["json", "gzip", "brotli", "deflate", "blocking"] }
 rand = "0.9.1"
