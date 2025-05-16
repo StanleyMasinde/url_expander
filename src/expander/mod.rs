@@ -2,6 +2,7 @@ pub mod response;
 
 use http_body_util::combinators::BoxBody;
 use hyper::{Error, Method, Request, Response, StatusCode, body::Bytes};
+use rand::{rng, seq::IndexedRandom};
 use reqwest::{Client, header};
 use response::build_response;
 
@@ -91,9 +92,28 @@ async fn return_preview_html(
     endpoint: String,
     client: Client,
 ) -> Result<String, Box<dyn std::error::Error>> {
+    let user_agents = [
+        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/27.0 Chrome/125.0.0.0 Mobile Safari/537.36",
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.6099.119 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) EdgiOS/123.0.2420.56 Version/18.0 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (Linux; Android 13; Redmi Note 12) AppleWebKit/537.36 (KHTML, like Gecko) Vivaldi/122.0 Mobile Safari/537.36",
+        "Mozilla/5.0 (Linux; Android 10; HarmonyOS; BAH4-W09; HMSCore 6.15.0.302) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.93 HuaweiBrowser/11.1.2.332 Safari/537.36",
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/120.0.6099.119 Mobile/15E148 Safari/604.1",
+        "Mozilla/5.0 (Linux; Android 9; Infinix X653C Build/PPR1.180610.011) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6422.146 Mobile Safari/537.36",
+        "Mozilla/5.0 (Linux; Android 12; V2234) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/87.0.4280.141 Mobile Safari/537.36 VivoBrowser/9.3.8.1",
+    ];
+
+    let user_agent = if endpoint.contains("facebook.com") || endpoint.contains("instagram.com") {
+        "curl/8.7.1".to_string()
+    } else {
+        let mut rng = rng();
+        let random_user_agent = user_agents.choose(&mut rng).unwrap();
+        random_user_agent.to_string()
+    };
+
     let res = client
         .get(endpoint)
-        .header(header::USER_AGENT, "curl/8.7.1")
+        .header(header::USER_AGENT, user_agent)
         .send()
         .await?;
 
