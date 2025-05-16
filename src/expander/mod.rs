@@ -42,6 +42,28 @@ pub async fn handle_expansion(
 
             build_response(StatusCode::OK, expanded_url.unwrap())
         }
+        (&Method::GET, "/proxy") => {
+            let query = req.uri().query().unwrap_or("");
+            let params: Vec<(String, String)> = url::form_urlencoded::parse(query.as_bytes())
+                .into_owned()
+                .collect();
+
+            let mut url_param = String::from("https://example.com");
+
+            if let Some((_, value)) = params.iter().find(|(key, _)| key == "url") {
+                let trimmed_val = value.trim();
+                if value.starts_with("http") {
+                    url_param = trimmed_val.to_string();
+                } else {
+                    url_param = String::from("https://") + trimmed_val
+                }
+            }
+
+            // We can visit the upstream URL
+            let parsed_url = url_param.parse::<hyper::Uri>();
+            let preview_html = return_preview_html(parsed_url.unwrap().to_string(), client).await;
+            build_response(StatusCode::OK, preview_html.unwrap())
+        }
         _ => build_response(StatusCode::NOT_FOUND, String::from("Resource not found")),
     }
 }
@@ -63,4 +85,19 @@ async fn follow_endpoint(
         .await?;
 
     Ok(resp.url().to_string())
+}
+
+async fn return_preview_html(
+    endpoint: String,
+    client: Client,
+) -> Result<String, Box<dyn std::error::Error>> {
+    let res = client
+        .get(endpoint)
+        .header(header::USER_AGENT, "curl/8.7.1")
+        .send()
+        .await?;
+
+    let html = res.text().await?;
+
+    Ok(html)
 }
