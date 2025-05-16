@@ -11,18 +11,18 @@ The URL Expander API allows you to expand shortened URLs and return the final de
 * **Expand a URL:**
 
   ```
-  GET lnky.api.stanleymasinde.com/?url=<shorturl>
+  GET lnky.api.stanleymasinde.com?url=<shorturl>
   ```
 
-  * Example: `lnky.api.stanleymasinde.com/?url=https://bit.ly/example`
+  * Example: `lnky.api.stanleymasinde.com?url=https://bit.ly`
 
 * **Proxy a URL to bypass CORS:**
 
   ```
-  GET lnky.api.stanleymasinde.com/proxy/?url=<url>
+  GET lnky.api.stanleymasinde.com/proxy?url=<url>
   ```
 
-  * Example: `lnky.api.stanleymasinde.com/proxy/?url=https://www.youtube.com/`
+  * Example: `lnky.api.stanleymasinde.com/proxy?url=https://stanleymasinde.com`
 
 ### Response Format
 
