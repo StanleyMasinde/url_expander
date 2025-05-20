@@ -1,5 +1,8 @@
 mod expander;
-use std::{env::args, net::SocketAddr};
+use std::{
+    env::args,
+    net::{IpAddr, SocketAddr},
+};
 
 use hyper::{server::conn::http1, service::service_fn};
 use hyper_util::rt::TokioIo;
@@ -24,13 +27,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     println!("Server running on http://localhost:{}", addr.port());
 
-    let client_r = Client::builder().build().unwrap();
+    let client_r = Client::builder()
+        .local_address(IpAddr::from([0, 0, 0, 0]))
+        .build()
+        .unwrap();
     let http_builder = http1::Builder::new();
 
     loop {
         let (stream, _) = listener.accept().await?;
         let io = TokioIo::new(stream);
-        let client = client_r.clone(); 
+        let client = client_r.clone();
         let http_builder_ref = http_builder.clone();
 
         tokio::task::spawn(async move {
