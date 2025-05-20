@@ -41,9 +41,19 @@ pub async fn handle_expansion(
                 );
             }
 
-            let expanded_url = follow_endpoint(parsed_url.unwrap().to_string(), client).await;
+            let expanded_url_response =
+                match follow_endpoint(parsed_url.unwrap().to_string(), client).await {
+                    Ok(url) => url,
+                    Err(err) => format!("{}", err),
+                };
 
-            build_response(StatusCode::OK, expanded_url.unwrap())
+            let mut status = StatusCode::OK;
+
+            if expanded_url_response.contains("Failed") {
+                status = StatusCode::BAD_GATEWAY
+            }
+
+            build_response(status, expanded_url_response)
         }
         (&Method::GET, "/proxy") => {
             let query = req.uri().query().unwrap_or("");
@@ -82,7 +92,12 @@ async fn follow_endpoint(
     client: Client,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let headers = build_headers(&endpoint);
-    let resp = client.head(endpoint).headers(headers).send().await?;
+    let resp = client
+        .head(&endpoint)
+        .headers(headers)
+        .send()
+        .await
+        .map_err(|_er| format!("Failed to make Request to: {}", endpoint))?;
 
     Ok(resp.url().to_string())
 }
