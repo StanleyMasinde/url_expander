@@ -82,7 +82,7 @@ async fn follow_endpoint(
     client: Client,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let headers = build_headers(&endpoint);
-    let resp = client.get(endpoint).headers(headers).send().await?;
+    let resp = client.head(endpoint).headers(headers).send().await?;
 
     Ok(resp.url().to_string())
 }
