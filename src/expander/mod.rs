@@ -155,5 +155,10 @@ fn build_headers(endpoint: &str) -> hyper::HeaderMap {
     );
     headers.insert("Cache-Control", HeaderValue::from_static("no-cache"));
 
+    headers.insert(
+        header::REFERER,
+        HeaderValue::from_str("https://www.google.com/").unwrap(),
+    );
+
     headers
 }
