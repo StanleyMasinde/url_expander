@@ -1,12 +1,12 @@
 mod expander;
 use std::{
     env::args,
-    net::{IpAddr, SocketAddr},
+    net::{IpAddr, SocketAddr}, sync::Arc,
 };
 
 use hyper::{server::conn::http1, service::service_fn};
 use hyper_util::rt::TokioIo;
-use reqwest::Client;
+use reqwest::{cookie::Jar, Client};
 use tokio::net::TcpListener;
 
 #[tokio::main]
@@ -27,8 +27,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     println!("Server running on http://localhost:{}", addr.port());
 
+    // Create a cookie jar
+    let cookie_store = Arc::new(Jar::default());
     let client_r = Client::builder()
         .local_address(IpAddr::from([0, 0, 0, 0]))
+        .cookie_store(true)
+        .cookie_provider(cookie_store.clone())
         .build()
         .unwrap();
     let http_builder = http1::Builder::new();
