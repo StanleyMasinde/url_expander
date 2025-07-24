@@ -44,7 +44,7 @@ pub async fn handle_expansion(
             let expanded_url_response =
                 match follow_endpoint(parsed_url.unwrap().to_string(), client).await {
                     Ok(url) => url,
-                    Err(err) => format!("{}", err),
+                    Err(err) => format!("{err}"),
                 };
 
             let mut status = StatusCode::OK;
@@ -97,7 +97,7 @@ async fn follow_endpoint(
         .headers(headers)
         .send()
         .await
-        .map_err(|_er| format!("Failed to make Request to: {}", endpoint))?;
+        .map_err(|_er| format!("Failed to make Request to: {endpoint}"))?;
 
     Ok(resp.url().to_string())
 }

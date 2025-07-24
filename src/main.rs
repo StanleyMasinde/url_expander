@@ -17,13 +17,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let port_number = port
         .parse::<u16>()
-        .map_err(|e| format!("The port has to be a number: {:?}", e))?;
+        .map_err(|e| format!("The port has to be a number: {e:?}"))?;
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port_number));
 
     let listener = TcpListener::bind(addr)
         .await
-        .map_err(|e| format!("Failed to bind to port {}", e))?;
+        .map_err(|e| format!("Failed to bind to port {e}"))?;
 
     println!("Server running on http://localhost:{}", addr.port());
 
@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 )
                 .await
             {
-                eprintln!("Error serving connection: {:?}", err);
+                eprintln!("Error serving connection: {err:?}");
             }
         });
     }
