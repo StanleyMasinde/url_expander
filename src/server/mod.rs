@@ -41,10 +41,7 @@ async fn index_handler(
 
     if let Some(url) = params.get("url") {
         let res = expander::expand_url(url.to_string(), client).await;
-        (
-            StatusCode::OK,
-            res,
-        )
+        (StatusCode::OK, res)
     } else {
         (StatusCode::BAD_REQUEST, "URL parameter missing".to_string())
     }
@@ -64,6 +61,6 @@ async fn proxy_url(
                 .unwrap(),
         )
     } else {
-        (StatusCode::BAD_REQUEST, "Not okay.to_string".to_string())
+        (StatusCode::BAD_REQUEST, "URL parameter missing".to_string())
     }
 }
