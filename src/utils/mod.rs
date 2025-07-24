@@ -43,11 +43,10 @@ pub fn randomize_user_agent(endpoint: &str) -> String {
     }
 }
 
-/// .
-/// Return the headers to be used
-/// # Panics
-///
-/// Panics if .
+/// Panics if:
+/// - The `randomize_user_agent` function panics due to an empty list of User-Agent strings or a failure in random selection.
+/// - The `HeaderValue::from_str` method panics if the provided User-Agent string is invalid.
+/// - The `HeaderValue::from_static` method panics if the provided static string is invalid (unlikely with hardcoded values).
 pub fn build_headers(endpoint: &str) -> HeaderMap {
     let user_agent = randomize_user_agent(endpoint);
     let mut headers = HeaderMap::new();
