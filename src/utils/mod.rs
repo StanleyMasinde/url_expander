@@ -2,11 +2,20 @@ use axum::http::{HeaderMap, HeaderValue};
 use rand::{rng, seq::IndexedRandom};
 use reqwest::header;
 
-/// .
-/// Randomize user agent
-/// # Panics
+/// Generates a randomized User-Agent string based on the provided endpoint.
 ///
-/// Panics if .
+/// This function selects a User-Agent string from a predefined list of common User-Agent headers.
+/// If the endpoint contains "facebook.com" or "instagram.com", a specific User-Agent string
+/// ("curl/8.7.1") is returned instead.
+///
+/// # Parameters
+/// - `endpoint`: A string slice representing the target endpoint URL.
+///
+/// # Returns
+/// A `String` containing the selected User-Agent header.
+///
+/// # Panics
+/// Panics if the predefined list of User-Agent strings is empty or if the random selection fails.
 pub fn randomize_user_agent(endpoint: &str) -> String {
     let user_agents = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.5672.126 Safari/537.36",
