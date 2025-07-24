@@ -1,6 +1,4 @@
-# Lnky API Documentation
-
-## URL Expander
+# URL Expander
 
 ### What is it?
 
