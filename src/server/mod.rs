@@ -29,8 +29,8 @@ pub async fn run() {
         .with_state(state);
 
     println!("Server running on http://{}", &address);
-    let listerner = tokio::net::TcpListener::bind(address).await.unwrap();
-    axum::serve(listerner, app).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(address).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
 
 async fn index_handler(
