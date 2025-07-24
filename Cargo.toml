@@ -1,5 +1,5 @@
 [package]
-name = "link_expander_v2"
+name = "link_expander"
 version = "0.1.0"
 edition = "2024"
 
