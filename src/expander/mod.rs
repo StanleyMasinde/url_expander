@@ -22,7 +22,7 @@ pub async fn expand_url(url: String, client: Client) -> Result<String, Box<dyn E
 async fn follow_endpoint(
     endpoint: String,
     client: Client,
-) -> Result<String, Box<dyn std::error::Error>> {
+) -> Result<String, Box<dyn Error>> {
     let headers = build_headers(&endpoint);
     let resp = client
         .head(&endpoint)
