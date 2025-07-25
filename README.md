@@ -10,27 +10,19 @@ Preview Links from your front-end applications. This is how [Lnky](https://lnky.
 
 ### Usage
 
-* **Expand a URL:**
-
-  ```
-  GET lnky.api.stanleymasinde.com?url=<shorturl>
-  ```
-
-  * Example:
+#### Expand a URL
+GET lnky.api.stanleymasinde.com?url=<shorturl>
+##### Example:
 ```shell
-  lnky.api.stanleymasinde.com?url=https://bit.ly`
+  curl "https://lnky.api.stanleymasinde.com?url=https://bit.ly"
 ```
 
-* **Proxy a URL to bypass CORS:**
-
-  ```
-  GET lnky.api.stanleymasinde.com/proxy?url=<url>
-  ```
-
-* Example:
-  ```shell
-  lnky.api.stanleymasinde.com/proxy?url=https://stanleymasinde.com`
-  ```
+#### Proxy a URL to bypass CORS:
+GET lnky.api.stanleymasinde.com/proxy?url=<url>
+#### Example:
+```shell
+  curl "https://lnky.api.stanleymasinde.com/proxy?url=https://stanleymasinde.com"
+```
 
 ### Response Format
 
