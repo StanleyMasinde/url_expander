@@ -40,8 +40,10 @@ async fn index_handler(
     let client = state.client;
 
     if let Some(url) = params.get("url") {
-        let res = expander::expand_url(url.to_string(), client).await;
-        (StatusCode::OK, res)
+        match expander::expand_url(url.to_string(), client).await {
+            Ok(url) => (StatusCode::OK, url),
+            Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()),
+        }
     } else {
         (StatusCode::BAD_REQUEST, "URL parameter missing".to_string())
     }
@@ -54,12 +56,10 @@ async fn proxy_url(
     let client = state.client;
 
     if let Some(url) = params.get("url") {
-        (
-            StatusCode::OK,
-            proxy::return_preview_html(url.to_string(), client)
-                .await
-                .unwrap(),
-        )
+            match proxy::return_preview_html(url.to_string(), client).await {
+                Ok(html) => (StatusCode::OK, html.to_string()),
+                Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()),
+            }
     } else {
         (StatusCode::BAD_REQUEST, "URL parameter missing".to_string())
     }
