@@ -1,4 +1,5 @@
 # URL Expander
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/StanleyMasinde/url_expander)
 
 ### What is it?
 
