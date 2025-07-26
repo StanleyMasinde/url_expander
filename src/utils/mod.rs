@@ -74,11 +74,19 @@ pub fn build_headers(endpoint: &str) -> HeaderMap {
     headers
 }
 
+/// Handles all `reqwest` errors by categorizing them based on their kind.
 ///
-/// Handle all reqwest errors by kind.
-/// This allows exhaustive error handing.
-/// It also replaces the use of `Box <dyn Error>`
-/// We get the exact error type then handle it like below.
+/// This function provides exhaustive error handling and replaces the use of `Box<dyn Error>`.
+/// It determines the exact error type and returns an appropriate HTTP status code along with
+/// a descriptive error message.
+///
+/// # Parameters
+/// - `error`: A `reqwest::Error` instance representing the error to handle.
+///
+/// # Returns
+/// A tuple containing:
+/// - `reqwest::StatusCode`: The HTTP status code corresponding to the error type.
+/// - `String`: A descriptive error message.
 ///
 pub fn handle_reqwest_error(error: reqwest::Error) -> (reqwest::StatusCode, std::string::String) {
     if error.is_builder() {
