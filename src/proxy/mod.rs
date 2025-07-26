@@ -10,7 +10,7 @@ use crate::utils::build_headers;
 pub async fn return_preview_html(
     endpoint: String,
     client: Client,
-) -> Result<String, Box<dyn std::error::Error>> {
+) -> Result<String, reqwest::Error> {
     let headers = build_headers(&endpoint);
     let res = client.get(endpoint).headers(headers).send().await?;
 

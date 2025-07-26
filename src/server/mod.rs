@@ -1,4 +1,4 @@
-use crate::{expander, proxy, request};
+use crate::{expander, proxy, request, utils::handle_reqwest_error};
 use std::{collections::HashMap, env::args};
 
 use axum::{
@@ -49,7 +49,7 @@ async fn index_handler(
     if let Some(url) = params.get("url") {
         match expander::expand_url(url.to_string(), client).await {
             Ok(url) => (StatusCode::OK, url),
-            Err(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()),
+            Err(error) => handle_reqwest_error(error),
         }
     } else {
         (StatusCode::BAD_REQUEST, "URL parameter missing".to_string())
@@ -65,7 +65,7 @@ async fn proxy_url(
     if let Some(url) = params.get("url") {
         match proxy::return_preview_html(url.to_string(), client).await {
             Ok(html) => (StatusCode::OK, html.to_string()),
-            Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()),
+            Err(error) => handle_reqwest_error(error),
         }
     } else {
         (StatusCode::BAD_REQUEST, "URL parameter missing".to_string())

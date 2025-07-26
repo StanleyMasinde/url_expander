@@ -1,6 +1,6 @@
 use axum::http::{HeaderMap, HeaderValue};
 use rand::{rng, seq::IndexedRandom};
-use reqwest::header;
+use reqwest::{StatusCode, header};
 
 /// Generates a randomized User-Agent string based on the provided endpoint.
 ///
@@ -72,4 +72,32 @@ pub fn build_headers(endpoint: &str) -> HeaderMap {
     );
 
     headers
+}
+
+///
+/// Handle all reqwest errors by kind.
+/// This allows exhaustive error handing.
+/// It also replaces the use of `Box <dyn Error>`
+/// We get the exact error type then handle it like below.
+///
+pub fn handle_reqwest_error(error: reqwest::Error) -> (reqwest::StatusCode, std::string::String) {
+    if error.is_builder() {
+        (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "The provided URL is is not valid. Please check it and try again.".to_string(),
+        )
+    } else if error.is_request() {
+        (
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!(
+                "Request failed! {} does not seem to resolve to a valid domain.",
+                error.url().unwrap()
+            ),
+        )
+    } else {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "An error occoured on our side. Please try again later.".to_string(),
+        )
+    }
 }
