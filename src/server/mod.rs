@@ -7,7 +7,8 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
-use reqwest::{Client, StatusCode};
+use reqwest::{Client, Method, StatusCode};
+use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Clone)]
 struct AppState {
@@ -23,10 +24,16 @@ pub async fn run() {
     let client = request::create_reqwest();
     let state = AppState { client };
 
+    // Layers
+    let cors = CorsLayer::new()
+        .allow_methods([Method::GET])
+        .allow_origin(Any);
+
     let app = Router::new()
         .route("/", get(index_handler))
         .route("/proxy", get(proxy_url))
-        .with_state(state);
+        .with_state(state)
+        .layer(cors);
 
     println!("Server running on http://{}", &address);
     let listener = tokio::net::TcpListener::bind(address).await.unwrap();
@@ -56,10 +63,10 @@ async fn proxy_url(
     let client = state.client;
 
     if let Some(url) = params.get("url") {
-            match proxy::return_preview_html(url.to_string(), client).await {
-                Ok(html) => (StatusCode::OK, html.to_string()),
-                Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()),
-            }
+        match proxy::return_preview_html(url.to_string(), client).await {
+            Ok(html) => (StatusCode::OK, html.to_string()),
+            Err(err) => (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()),
+        }
     } else {
         (StatusCode::BAD_REQUEST, "URL parameter missing".to_string())
     }
