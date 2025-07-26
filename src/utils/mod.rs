@@ -84,20 +84,23 @@ pub fn handle_reqwest_error(error: reqwest::Error) -> (reqwest::StatusCode, std:
     if error.is_builder() {
         (
             StatusCode::UNPROCESSABLE_ENTITY,
-            "The provided URL is is not valid. Please check it and try again.".to_string(),
+            "The provided URL is not valid. Please check it and try again.".to_string(),
         )
     } else if error.is_request() {
         (
             StatusCode::UNPROCESSABLE_ENTITY,
             format!(
                 "Request failed! {} does not seem to resolve to a valid domain.",
-                error.url().unwrap()
+                error
+                    .url()
+                    .map(|u| u.to_string())
+                    .unwrap_or_else(|| "unkown URL".to_string())
             ),
         )
     } else {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            "An error occoured on our side. Please try again later.".to_string(),
+            "An error occurred on our side. Please try again later.".to_string(),
         )
     }
 }
