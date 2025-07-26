@@ -94,7 +94,7 @@ pub fn handle_reqwest_error(error: reqwest::Error) -> (reqwest::StatusCode, std:
                 error
                     .url()
                     .map(|u| u.to_string())
-                    .unwrap_or_else(|| "unkown URL".to_string())
+                    .unwrap_or_else(|| "unknown URL".to_string())
             ),
         )
     } else {
