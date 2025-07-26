@@ -8,7 +8,7 @@ use axum::{
     routing::get,
 };
 use reqwest::{Client, Method, StatusCode};
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowOrigin, CorsLayer};
 
 #[derive(Clone)]
 struct AppState {
@@ -27,7 +27,7 @@ pub async fn run() {
     // Layers
     let cors = CorsLayer::new()
         .allow_methods([Method::GET])
-        .allow_origin(Any);
+        .allow_origin(AllowOrigin::mirror_request());
 
     let app = Router::new()
         .route("/", get(index_handler))
