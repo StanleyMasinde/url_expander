@@ -1,6 +1,6 @@
 use reqwest::Client;
 
-use crate::utils::build_headers;
+use crate::utils::build_headers::build_headers;
 
 /// Fetches and returns the HTML content of a given endpoint.
 ///
