@@ -1,10 +1,9 @@
 use std::{net::IpAddr, sync::Arc};
 
-use reqwest::{cookie::Jar, Client};
+use reqwest::{Client, cookie::Jar};
 
 pub fn create_reqwest() -> Client {
     let cookie_store = Arc::new(Jar::default());
-
 
     Client::builder()
         .local_address(IpAddr::from([0, 0, 0, 0]))

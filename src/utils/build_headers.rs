@@ -44,7 +44,6 @@ mod tests {
         let headers = build_headers("https://stanleymasinde.com");
         let cache_control = headers.get(header::CACHE_CONTROL).unwrap();
 
-
         assert_eq!(cache_control, HeaderValue::from_static("no-cache"));
     }
 }

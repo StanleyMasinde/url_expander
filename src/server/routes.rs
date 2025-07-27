@@ -9,7 +9,9 @@ use axum::{
 use reqwest::{Method, StatusCode};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
-use crate::{expander, proxy, request, server::AppState, utils::reqwest_error::handle_reqwest_error};
+use crate::{
+    expander, proxy, request, server::AppState, utils::reqwest_error::handle_reqwest_error,
+};
 
 pub fn routes() -> Router {
     Router::new()
