@@ -38,14 +38,3 @@ pub fn handle_reqwest_error(error: reqwest::Error) -> (reqwest::StatusCode, std:
         )
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn reqwest_error_handling() {
-        let error: reqwest::Error = {};
-        let response = handle_reqwest_error(error);
-    }
-}
