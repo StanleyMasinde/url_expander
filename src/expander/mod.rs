@@ -1,6 +1,6 @@
 use reqwest::Client;
 
-use crate::utils::build_headers;
+use crate::utils::build_headers::build_headers;
 
 pub async fn expand_url(url: String, client: Client) -> Result<String, reqwest::Error> {
     let final_url = follow_endpoint(url, client).await?;
