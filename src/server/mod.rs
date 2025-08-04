@@ -16,7 +16,11 @@ pub async fn run() {
 
     let app = Router::new().merge(routes::routes());
 
-    println!("Server running on http://{}", &address);
-    let listener = tokio::net::TcpListener::bind(address).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(address)
+        .await
+        .inspect(|t| {
+            println!("Server started on http://{}", t.local_addr().unwrap())
+        })
+        .unwrap();
     axum::serve(listener, app).await.unwrap();
 }
