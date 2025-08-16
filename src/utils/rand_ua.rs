@@ -15,7 +15,7 @@ use rand::{rng, seq::IndexedRandom};
 ///
 /// # Panics
 /// Panics if the predefined list of User-Agent strings is empty or if the random selection fails.
-pub fn randomize_user_agent(endpoint: &str) -> String {
+pub fn randomize_user_agent<'a>(endpoint: &str) -> &'a str {
     let user_agents = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.5672.126 Safari/537.36",
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edg/113.0.1774.50 Safari/537.36",
@@ -34,14 +34,13 @@ pub fn randomize_user_agent(endpoint: &str) -> String {
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Opera/80.0.4170.63 Safari/537.36",
     ];
     if endpoint.contains("facebook.com") || endpoint.contains("instagram.com") {
-        "curl/8.7.1".to_string()
+        "curl/8.7.1"
     } else {
         let mut rng = rng();
 
         user_agents
             .choose(&mut rng)
-            .map(|ua| ua.to_string())
-            .unwrap_or_else(|| "curl/8.7.1".to_string())
+            .map_or("curl/8.7.1", |v| v)
     }
 }
 

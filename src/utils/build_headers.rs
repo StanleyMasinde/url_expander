@@ -12,7 +12,7 @@ pub fn build_headers(endpoint: &str) -> HeaderMap {
     let mut headers = HeaderMap::new();
     headers.insert(
         header::USER_AGENT,
-        HeaderValue::from_str(&user_agent).expect("Invalid user agent"),
+        HeaderValue::from_static(user_agent),
     );
     headers.insert(
         header::ACCEPT,
@@ -28,7 +28,7 @@ pub fn build_headers(endpoint: &str) -> HeaderMap {
 
     headers.insert(
         header::REFERER,
-        HeaderValue::from_str("https://www.google.com/").unwrap(),
+        HeaderValue::from_static("https://www.google.com/"),
     );
 
     headers

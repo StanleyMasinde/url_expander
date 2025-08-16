@@ -48,7 +48,7 @@ async fn index_handler(
     let client = state.client;
 
     if let Some(url) = params.get("url") {
-        match expander::expand_url(url.to_string(), client).await {
+        match expander::expand_url(url, client).await {
             Ok(url) => (StatusCode::OK, url),
             Err(error) => handle_reqwest_error(error),
         }
