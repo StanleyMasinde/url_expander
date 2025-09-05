@@ -15,7 +15,7 @@ pub async fn expand_url(url: &str, client: Client) -> Result<String, reqwest::Er
 /// # Errors
 /// Returns an error if the request fails or the URL cannot be resolved.
 async fn follow_endpoint(endpoint: &str, client: Client) -> Result<String, reqwest::Error> {
-    let headers = build_headers(&endpoint);
+    let headers = build_headers(endpoint);
     let resp = client.head(endpoint).headers(headers).send().await?;
 
     Ok(resp.url().to_string())
