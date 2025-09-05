@@ -1,5 +1,6 @@
 pub mod routes;
 use axum::Router;
+use log::error;
 use reqwest::Client;
 use std::{env::args, io::ErrorKind, process::exit};
 
@@ -23,11 +24,11 @@ pub async fn run() {
         Ok(l) => l,
         Err(error) => {
             if error.kind() == ErrorKind::PermissionDenied {
-                eprintln!("You don't have persmission to port {port}.")
+                error!("You don't have permission to port {port}.")
             } else if error.kind() == ErrorKind::AddrInUse {
-                eprintln!("Port {port} is already in use.")
+                error!("Port {port} is already in use.")
             } else {
-                eprintln!("Could not start the server {error}")
+                error!("Could not start the server {error}")
             }
 
             exit(1)
