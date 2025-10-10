@@ -1,34 +1,69 @@
-# URL Expander
+# URL Expander API
 
-### What is it?
+### Overview
 
-The URL Expander API allows you to expand shortened URLs and return the final destination URL. This helps bypass tracking mechanisms and ensures privacy.
-It can also be used as a proxy to bypass CORS.
+The **URL Expander API** resolves shortened or redirected URLs to their final destination.
+It’s designed for privacy-focused applications — by expanding URLs server-side, you can strip out tracking redirects and reveal where links actually lead.
 
-Bypassing CORS is not a good idea unless you are in development. Or in this case, you might need to bypass CORS so that you can
-Preview Links from your front-end applications. This is how [Lnky](https://lnky.stanleymasinde.com), does it. It routes the URL through the `proxy` endpoint.
+The API also includes a lightweight proxy endpoint for previewing links in client-side apps that would otherwise hit **CORS** restrictions.
+**Note:** This proxy is intended for **development and controlled environments only**. Avoid using it in production unless you fully trust the upstream content.
 
-### Usage
+Lnky’s front-end uses this mechanism to safely preview links through the `/proxy` endpoint.
+See [Lnky](https://lnky.stanleymasinde.com) for reference.
 
-#### Expand a URL
-GET [lnky.api.stanleymasinde.com?url=shorturl](lnky.api.stanleymasinde.com?url=https://rb.gy/4wqwzf)
-##### Example:
-```shell
-  curl -L "https://lnky.api.stanleymasinde.com?url=https://bit.ly"
+---
+
+### Endpoints
+
+#### 1. Expand a URL
+
+Resolves the final destination of a shortened link.
+
+**GET**
+
+```
+https://lnky.api.stanleymasinde.com?url=<short_url>
 ```
 
-#### Proxy a URL to bypass CORS:
-GET lnky.api.stanleymasinde.com/proxy?url=<url>
-#### Example:
-```shell
-  curl -L "https://lnky.api.stanleymasinde.com/proxy?url=https://stanleymasinde.com"
+**Example:**
+
+```bash
+curl -L "https://lnky.api.stanleymasinde.com?url=https://rb.gy/4wqwzf"
 ```
+
+---
+
+#### 2. Proxy a URL (bypass CORS)
+
+Fetches the raw content from a target URL, allowing front-end previews during development.
+
+**GET**
+
+```
+https://lnky.api.stanleymasinde.com/proxy?url=<target_url>
+```
+
+**Example:**
+
+```bash
+curl -L "https://lnky.api.stanleymasinde.com/proxy?url=https://stanleymasinde.com"
+```
+
+---
 
 ### Response Format
 
-* The API returns a plain text response containing the final URL or plain HTML. It does not return JSON or HTML.
+The API returns:
 
-### Is this Deployed?
+* **Plain text** containing the final expanded URL, or
+* **Raw HTML** when using `/proxy`.
 
-Yes, it is part of my [Lnky project on GitHub](https://github.com/StanleyMasinde/Lnky). It is responsible for expanding short links like bit.ly.
+It does **not** return JSON or any structured metadata.
+
+---
+
+### Deployment
+
+This service is deployed as part of [Lnky](https://github.com/StanleyMasinde/Lnky), a privacy-focused link untracker and expander written in Rust.
+It powers Lnky’s backend expansion logic for services like Bitly and t.co.
 
