@@ -11,7 +11,7 @@ Preview Links from your front-end applications. This is how [Lnky](https://lnky.
 ### Usage
 
 #### Expand a URL
-GET [lnky.api.stanleymasinde.com?url=<shorturl>](lnky.api.stanleymasinde.com?url=https://rb.gy/4wqwzf)
+GET [lnky.api.stanleymasinde.com?url=shorturl](lnky.api.stanleymasinde.com?url=https://rb.gy/4wqwzf)
 ##### Example:
 ```shell
   curl -L "https://lnky.api.stanleymasinde.com?url=https://bit.ly"
