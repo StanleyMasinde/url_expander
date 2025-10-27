@@ -38,9 +38,7 @@ pub fn randomize_user_agent<'a>(endpoint: &str) -> &'a str {
     } else {
         let mut rng = rng();
 
-        user_agents
-            .choose(&mut rng)
-            .map_or("curl/8.7.1", |v| v)
+        user_agents.choose(&mut rng).map_or("curl/8.7.1", |v| v)
     }
 }
 

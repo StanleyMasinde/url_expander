@@ -10,10 +10,7 @@ use crate::utils::rand_ua::randomize_user_agent;
 pub fn build_headers(endpoint: &str) -> HeaderMap {
     let user_agent = randomize_user_agent(endpoint);
     let mut headers = HeaderMap::new();
-    headers.insert(
-        header::USER_AGENT,
-        HeaderValue::from_static(user_agent),
-    );
+    headers.insert(header::USER_AGENT, HeaderValue::from_static(user_agent));
     headers.insert(
         header::ACCEPT,
         HeaderValue::from_static(
@@ -43,7 +40,6 @@ mod tests {
     fn test_build_headers() {
         let headers = build_headers("https://stanleymasinde.com");
         let cache_control = headers.get(header::CACHE_CONTROL).unwrap();
-
 
         assert_eq!(cache_control, HeaderValue::from_static("no-cache"));
     }
