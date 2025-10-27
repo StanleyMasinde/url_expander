@@ -66,7 +66,7 @@ async fn proxy_url(
     let client = state.client;
 
     if let Some(url) = params.get("url") {
-        match proxy::return_preview_html(url.to_string(), client).await {
+        match proxy::return_preview_html(url, client).await {
             Ok(html) => (StatusCode::OK, html.to_string()),
             Err(error) => handle_reqwest_error(error),
         }
