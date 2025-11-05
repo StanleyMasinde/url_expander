@@ -33,7 +33,9 @@ curl -L "https://lnky.api.stanleymasinde.com?url=https://rb.gy/4wqwzf"
 
 ---
 
-#### 2. Proxy a URL (bypass CORS)
+#### 2. Proxy a URL
+> This can be used to bypass CORs. I use it in Lnky to show SEO previews.
+> One could also use it to temporarily bypass CORs.
 
 Fetches the raw content from a target URL, allowing front-end previews during development.
 
