@@ -60,7 +60,7 @@ The API returns:
 * **Plain text** containing the final expanded URL, or
 * **Raw HTML** when using `/proxy`.
 
-It does **not** return JSON or any structured metadata.
+It does **not** return JSON or any structured metadat unless the procied endpoint is structured. 
 
 ---
 
