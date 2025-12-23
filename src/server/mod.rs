@@ -1,3 +1,4 @@
+pub mod middleware;
 pub mod routes;
 use axum::Router;
 use log::error;

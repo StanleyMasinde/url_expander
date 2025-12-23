@@ -2,6 +2,7 @@ mod expander;
 mod proxy;
 mod request;
 mod server;
+mod types;
 mod utils;
 
 #[tokio::main]

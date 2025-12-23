@@ -1,8 +1,12 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use axum::{
     Router,
     extract::{Query, State},
+    middleware,
     response::IntoResponse,
     routing::get,
 };
@@ -12,6 +16,7 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use crate::{
     expander, proxy, request, server::AppState, utils::reqwest_error::handle_reqwest_error,
 };
+use crate::{server::middleware::rate_limit::rate_limit, types::RateLimiter};
 
 pub fn routes() -> Router {
     Router::new()
@@ -25,10 +30,15 @@ fn index_routes() -> Router {
         .allow_origin(AllowOrigin::mirror_request());
     let client = request::create_reqwest();
     let state = AppState { client };
+    let limiter = RateLimiter {
+        buckets: Arc::new(Mutex::new(HashMap::new())),
+    };
     Router::new()
         .route("/", get(index_handler))
         .route("/proxy", get(proxy_url))
+        .layer(middleware::from_fn_with_state(limiter.clone(), rate_limit))
         .with_state(state)
+        .with_state(limiter)
         .layer(cors)
 }
 
