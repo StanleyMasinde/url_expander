@@ -1,12 +1,13 @@
 use std::{
-    collections::HashMap,
     sync::{Arc, Mutex},
     time::Instant,
 };
 
+use dashmap::DashMap;
+
 #[derive(Clone)]
 pub struct RateLimiter {
-    pub buckets: Arc<Mutex<HashMap<String, Bucket>>>,
+    pub buckets: Arc<Mutex<DashMap<String, Bucket>>>,
 }
 
 #[derive(Clone)]

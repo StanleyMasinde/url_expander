@@ -10,6 +10,7 @@ use axum::{
     response::IntoResponse,
     routing::get,
 };
+use dashmap::DashMap;
 use reqwest::{Method, StatusCode};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
@@ -31,7 +32,7 @@ fn index_routes() -> Router {
     let client = request::create_reqwest();
     let state = AppState { client };
     let limiter = RateLimiter {
-        buckets: Arc::new(Mutex::new(HashMap::new())),
+        buckets: Arc::new(Mutex::new(DashMap::new())),
     };
     Router::new()
         .route("/", get(index_handler))
