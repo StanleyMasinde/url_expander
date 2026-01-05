@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, sync::Arc};
 
 use axum::{
     Router,
@@ -32,7 +29,7 @@ fn index_routes() -> Router {
     let client = request::create_reqwest();
     let state = AppState { client };
     let limiter = RateLimiter {
-        buckets: Arc::new(Mutex::new(DashMap::new())),
+        buckets: Arc::new(DashMap::new()),
     };
     Router::new()
         .route("/", get(index_handler))

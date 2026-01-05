@@ -26,7 +26,7 @@ pub async fn rate_limit(
     // in in the map is dropped.
     // For some reason, manually calling drop before the last await does not work
     {
-        let map = limiter.buckets.lock().unwrap();
+        let map = limiter.buckets;
         let now = Instant::now();
 
         let mut bucket = map.entry(fingerprint).or_insert(Bucket {
