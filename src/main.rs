@@ -1,9 +1,4 @@
-mod expander;
-mod proxy;
-mod request;
-mod server;
-mod types;
-mod utils;
+use link_expander::server;
 
 #[tokio::main]
 async fn main() {
