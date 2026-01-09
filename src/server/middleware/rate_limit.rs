@@ -1,7 +1,8 @@
-use std::time::Instant;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use axum::{
     extract::{Request, State},
+    http::HeaderValue,
     middleware::Next,
     response::Response,
 };
@@ -22,30 +23,49 @@ pub async fn rate_limit(
 ) -> Response {
     let fingerprint = generate_fingerprint(&request);
 
-    // I have created this inner scope to make sure that the lock
-    // in in the map is dropped.
-    // For some reason, manually calling drop before the last await does not work
-    {
-        let map = limiter.buckets;
-        let now = Instant::now();
+    let map = limiter.buckets;
+    let now = Instant::now();
 
-        let mut bucket = map.entry(fingerprint).or_insert(Bucket {
-            tokens: CAPACITY,
-            last_refill: now,
-        });
+    let mut bucket = map.entry(fingerprint).or_insert(Bucket {
+        tokens: CAPACITY,
+        last_refill: now,
+    });
 
-        let elapsed = now.duration_since(bucket.last_refill).as_secs_f64();
-        bucket.tokens = (bucket.tokens + elapsed * REFILL_RATE).min(CAPACITY);
-        bucket.last_refill = now;
+    let elapsed = now.duration_since(bucket.last_refill).as_secs_f64();
+    bucket.tokens = (bucket.tokens.floor() + elapsed * REFILL_RATE)
+        .min(CAPACITY)
+        .floor();
+    bucket.last_refill = now;
 
-        if bucket.tokens < 1.0 {
-            return Response::builder()
-                .status(StatusCode::TOO_MANY_REQUESTS)
-                .body("Rate limit exceeded".into())
-                .unwrap();
-        }
-
-        bucket.tokens -= 1.0;
+    if bucket.tokens < 1.0 {
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        let limit_reset = now.as_secs_f64() + (1.0 - bucket.tokens.floor()) / REFILL_RATE;
+        let retry_after = limit_reset - now.as_secs_f64();
+        return Response::builder()
+            .header("Retry-After", retry_after.floor().to_string())
+            .header("X-RateLimit-Limit", CAPACITY.to_string())
+            .header("X-RateLimit-Remaining", bucket.tokens.to_string())
+            .header("X-RateLimit-Reset", limit_reset.floor().to_string())
+            .status(StatusCode::TOO_MANY_REQUESTS)
+            .body("Rate limit exceeded".into())
+            .unwrap();
     }
-    next.run(request).await
+
+    bucket.tokens -= 1.0;
+    let mut response = next.run(request).await;
+
+    response
+        .headers_mut()
+        .insert("X-RateLimit-Limit", CAPACITY.to_string().parse().unwrap());
+    response.headers_mut().insert(
+        "X-RateLimit-Remaining",
+        bucket.tokens.to_string().parse().unwrap(),
+    );
+    let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+    response.headers_mut().insert(
+        "X-RateLimit-Reset",
+        HeaderValue::from_str(&current_time.as_secs_f64().floor().to_string()).unwrap(),
+    );
+
+    response
 }
