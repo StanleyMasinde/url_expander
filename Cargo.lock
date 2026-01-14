@@ -959,6 +959,7 @@ dependencies = [
  "rand",
  "reqwest",
  "sha2",
+ "thiserror 2.0.17",
  "tokio",
  "tower-http",
 ]
