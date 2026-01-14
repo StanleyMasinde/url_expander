@@ -10,7 +10,7 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-enum CacheError {
+pub(crate) enum CacheError {
     #[error("Item not found in cache.")]
     NotFound,
 
@@ -21,33 +21,33 @@ enum CacheError {
     UknownError,
 }
 
-enum Storage {
+pub(crate) enum Storage {
     Memory,
     Disk,
 }
 
 type CacheResult<T> = Result<T, CacheError>;
 
-trait Transport {
+pub trait Transport {
     fn set(&self, key: &str, value: String) -> CacheResult<bool>;
     fn get(&self, key: &str) -> CacheResult<Option<String>>;
     fn delete(&self, key: &str) -> CacheResult<bool>;
 }
 
-struct Cache {
+pub(crate) struct Cache {
     entries: DashMap<String, String>,
     storage: Storage,
 }
 
 impl Cache {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             entries: DashMap::new(),
             storage: Storage::Memory,
         }
     }
 
-    fn with_storage(mut self, store: Storage) -> Self {
+    pub fn with_storage(mut self, store: Storage) -> Self {
         self.storage = store;
         self
     }
