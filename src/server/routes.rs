@@ -14,7 +14,10 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use crate::{
     expander, proxy, request,
     server::{AppState, middleware::cache},
-    utils::reqwest_error::handle_reqwest_error,
+    utils::{
+        cache::{Cache, Storage, Transport},
+        reqwest_error::handle_reqwest_error,
+    },
 };
 use crate::{server::middleware::rate_limit::rate_limit, types::RateLimiter};
 
@@ -62,7 +65,11 @@ async fn index_handler(
 
     if let Some(url) = params.get("url") {
         match expander::expand_url(url, client).await {
-            Ok(url) => (StatusCode::OK, url),
+            Ok(expanded_url) => {
+                let app_cache = Cache::new();
+                app_cache.set(url, expanded_url.clone()).unwrap();
+                (StatusCode::OK, expanded_url)
+            }
             Err(error) => handle_reqwest_error(error),
         }
     } else {
@@ -78,7 +85,11 @@ async fn proxy_url(
 
     if let Some(url) = params.get("url") {
         match proxy::return_preview_html(url, client).await {
-            Ok(html) => (StatusCode::OK, html.to_string()),
+            Ok(html) => {
+                let app_cache = Cache::new().with_storage(Storage::Disk);
+                app_cache.set(url, html.clone()).unwrap();
+                (StatusCode::OK, html.to_string())
+            }
             Err(error) => handle_reqwest_error(error),
         }
     } else {
