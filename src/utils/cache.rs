@@ -1,6 +1,6 @@
 use std::{
     fs::{create_dir_all, read_to_string, remove_file, write},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 static CACHE_DIR: &str = "url_expander";
@@ -29,7 +29,7 @@ pub(crate) enum Storage {
 type CacheResult<T> = Result<T, CacheError>;
 
 pub trait Transport {
-    fn set(&self, key: &str, value: String) -> CacheResult<bool>;
+    fn set(&self, key: &str, value: &str) -> CacheResult<bool>;
     fn get(&self, key: &str) -> CacheResult<Option<String>>;
     fn delete(&self, key: &str) -> CacheResult<bool>;
 }
@@ -61,10 +61,10 @@ impl Cache {
 }
 
 impl Transport for Cache {
-    fn set(&self, key: &str, value: String) -> CacheResult<bool> {
+    fn set(&self, key: &str, value: &str) -> CacheResult<bool> {
         match self.storage {
             Storage::Memory => {
-                self.entries.insert(key.into(), value);
+                self.entries.insert(key.into(), value.into());
                 Ok(true)
             }
             Storage::Disk => {

@@ -67,7 +67,7 @@ async fn index_handler(
         match expander::expand_url(url, client).await {
             Ok(expanded_url) => {
                 let app_cache = Cache::new();
-                app_cache.set(url, expanded_url.clone()).unwrap();
+                app_cache.set(url, &expanded_url).unwrap();
                 (StatusCode::OK, expanded_url)
             }
             Err(error) => handle_reqwest_error(error),
@@ -87,7 +87,7 @@ async fn proxy_url(
         match proxy::return_preview_html(url, client).await {
             Ok(html) => {
                 let app_cache = Cache::new().with_storage(Storage::Disk);
-                app_cache.set(url, html.clone()).unwrap();
+                app_cache.set(url, &html).unwrap();
                 (StatusCode::OK, html.to_string())
             }
             Err(error) => handle_reqwest_error(error),
