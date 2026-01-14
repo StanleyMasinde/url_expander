@@ -12,7 +12,9 @@ use reqwest::{Method, StatusCode};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use crate::{
-    expander, proxy, request, server::AppState, utils::reqwest_error::handle_reqwest_error,
+    expander, proxy, request,
+    server::{AppState, middleware::cache},
+    utils::reqwest_error::handle_reqwest_error,
 };
 use crate::{server::middleware::rate_limit::rate_limit, types::RateLimiter};
 
@@ -35,6 +37,7 @@ fn index_routes() -> Router {
         .route("/", get(index_handler))
         .route("/proxy", get(proxy_url))
         .layer(middleware::from_fn_with_state(limiter.clone(), rate_limit))
+        .layer(middleware::from_fn(cache::cache))
         .with_state(state)
         .with_state(limiter)
         .layer(cors)
