@@ -1,6 +1,8 @@
 use std::{
+    fmt::Display,
     fs::{create_dir_all, read_to_string, remove_file, write},
     path::PathBuf,
+    time::{Duration, Instant},
 };
 
 static CACHE_DIR: &str = "url_expander";
@@ -29,14 +31,69 @@ pub(crate) enum Storage {
 type CacheResult<T> = Result<T, CacheError>;
 
 pub trait Transport {
-    fn set(&self, key: &str, value: &str) -> CacheResult<bool>;
+    fn prune(&self) -> CacheResult<bool>;
+    fn set<V>(&self, key: &str, value: V) -> CacheResult<bool>
+    where
+        V: Cacheable;
     fn get(&self, key: &str) -> CacheResult<Option<String>>;
     fn delete(&self, key: &str) -> CacheResult<bool>;
 }
 
+#[derive(Debug)]
+struct CacheItem {
+    value: String,
+    last_update: Instant,
+}
+
+impl From<&str> for CacheItem {
+    fn from(value: &str) -> Self {
+        Self {
+            value: value.to_string(),
+            last_update: Instant::now(),
+        }
+    }
+}
+
+impl Display for CacheItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.value)
+    }
+}
+
+impl From<String> for CacheItem {
+    fn from(value: String) -> Self {
+        Self {
+            value,
+            last_update: Instant::now(),
+        }
+    }
+}
+
 pub(crate) struct Cache {
-    entries: DashMap<String, String>,
+    entries: DashMap<String, CacheItem>,
     storage: Storage,
+}
+
+trait Cacheable {
+    fn to_cache_value(self) -> CacheItem;
+}
+
+impl Cacheable for String {
+    fn to_cache_value(self) -> CacheItem {
+        CacheItem {
+            value: self,
+            last_update: Instant::now(),
+        }
+    }
+}
+
+impl Cacheable for &str {
+    fn to_cache_value(self) -> CacheItem {
+        CacheItem {
+            value: self.to_string(),
+            last_update: Instant::now(),
+        }
+    }
 }
 
 impl Cache {
@@ -60,11 +117,23 @@ impl Cache {
     }
 }
 
+impl Cacheable for CacheItem {
+    fn to_cache_value(self) -> CacheItem {
+        CacheItem {
+            value: self.value,
+            last_update: self.last_update,
+        }
+    }
+}
+
 impl Transport for Cache {
-    fn set(&self, key: &str, value: &str) -> CacheResult<bool> {
+    fn set<V>(&self, key: &str, value: V) -> CacheResult<bool>
+    where
+        V: Cacheable,
+    {
         match self.storage {
             Storage::Memory => {
-                self.entries.insert(key.into(), value.into());
+                self.entries.insert(key.into(), value.to_cache_value());
                 Ok(true)
             }
             Storage::Disk => {
@@ -75,7 +144,7 @@ impl Transport for Cache {
                 if let Some(parent) = path_string.parent() {
                     create_dir_all(parent).unwrap();
                 }
-                match write(&path_string, value) {
+                match write(&path_string, value.to_cache_value().value) {
                     Ok(_) => Ok(true),
                     Err(err) => match err.kind() {
                         std::io::ErrorKind::NotFound => {
@@ -91,7 +160,7 @@ impl Transport for Cache {
     fn get(&self, key: &str) -> CacheResult<Option<String>> {
         match self.storage {
             Storage::Memory => {
-                let val = self.entries.get(key).map(|v| v.clone());
+                let val = self.entries.get(key).map(|v| v.value.clone());
                 Ok(val)
             }
             Storage::Disk => {
@@ -119,17 +188,42 @@ impl Transport for Cache {
             }
         }
     }
+
+    fn prune(&self) -> CacheResult<bool> {
+        match self.storage {
+            Storage::Memory => {
+                let stale_items: Vec<_> = self
+                    .entries
+                    .iter()
+                    .filter(|item| item.last_update.elapsed() > Duration::from_hours(24))
+                    .map(|item| item.key().clone())
+                    .collect();
+
+                for item in stale_items {
+                    self.entries.remove(&item).unwrap();
+                }
+
+                Ok(true)
+            }
+            Storage::Disk => Ok(true),
+        }
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::utils::cache::{Cache, Storage, Transport};
+    use std::{
+        ops::Sub,
+        time::{Duration, Instant},
+    };
+
+    use crate::utils::cache::{Cache, CacheItem, Storage, Transport};
 
     #[test]
     fn test_in_memory_cache() {
         let store = Cache::new();
         store
-            .set("https://rb.gy/4wqwzf", "https://stanleymasinde.com".into())
+            .set("https://rb.gy/4wqwzf", "https://stanleymasinde.com")
             .unwrap();
         let result = store.get("https://rb.gy/4wqwzf");
 
@@ -147,7 +241,7 @@ mod test {
     fn test_in_disk_cache() {
         let store = Cache::new().with_storage(Storage::Disk);
         store
-            .set("https://rb.gy/4wqwzf", "https://stanleymasinde.com".into())
+            .set("https://rb.gy/4wqwzf", "https://stanleymasinde.com")
             .unwrap();
         let result = store.get("https://rb.gy/4wqwzf");
 
@@ -159,5 +253,31 @@ mod test {
         store.delete("https://rb.gy/4wqwzf").unwrap();
 
         assert!(store.get("https://rb.gy/4wqwzf").unwrap().is_none());
+    }
+
+    #[test]
+    fn test_prune_cache() {
+        let store = Cache::new();
+        let key = "https://shortl.ink/4wqwzf";
+        let value = "https://stanleymasinde.com";
+
+        let new_item = CacheItem {
+            value: value.to_string(),
+            last_update: Instant::now().sub(Duration::from_hours(48)),
+        };
+
+        {
+            store.set(key, new_item).unwrap();
+
+            let stored_link = store.get(key).unwrap().unwrap();
+
+            assert_eq!(stored_link, value);
+        }
+
+        store.prune().unwrap();
+
+        let stored_link = store.get(key).unwrap();
+
+        assert!(stored_link.is_none());
     }
 }
