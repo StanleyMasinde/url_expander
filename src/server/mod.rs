@@ -13,6 +13,18 @@ struct AppState {
     memory_cache: Cache,
 }
 
+/// Starts the Axum HTTP server using the application's routes and a port taken from the first command-line argument (defaults to 3000).
+///
+/// The function binds a TCP listener on 127.0.0.1:<port>, prints the bound address on success, logs and exits the process with code 1 on bind failures, and runs the Axum router returned by `routes::routes()`.
+///
+/// # Examples
+///
+/// ```no_run
+/// #[tokio::main]
+/// async fn main() {
+///     run().await;
+/// }
+/// ```
 pub async fn run() {
     let default_port = String::from("3000");
     let args: Vec<String> = args().collect();

@@ -26,6 +26,16 @@ pub fn routes() -> Router {
         .merge(index_routes())
 }
 
+/// Builds the index-level Router configured with CORS, an in-memory cache, a rate limiter, and the index and proxy handlers.
+///
+/// The Router exposes GET "/" (index_handler) and GET "/proxy" (proxy_url), applies a rate-limit middleware and an in-memory cache middleware,
+/// initializes AppState (including a reqwest client and a memory Cache), spawns the background cache job runner, and registers the RateLimiter state.
+///
+/// # Examples
+///
+/// ```
+/// let _router: axum::Router = crate::server::index_routes();
+/// ```
 fn index_routes() -> Router {
     let cors = CorsLayer::new()
         .allow_methods([Method::GET])
@@ -64,6 +74,24 @@ async fn health_handler() -> impl IntoResponse {
     (StatusCode::OK, "OK".to_string())
 }
 
+/// Handles requests to the index route by expanding a provided `url` query parameter and caching the result.
+///
+/// If the `url` query parameter is present, expands it using the configured HTTP client and stores the mapping (original URL -> expanded URL) in the in-memory cache. On successful expansion and caching, responds with status 200 and the expanded URL. If expansion fails, the error is delegated to `handle_reqwest_error`. If storing into the in-memory cache fails, responds with status 500 and an error message. If the `url` query parameter is missing, responds with status 400 and the message "URL parameter missing".
+///
+/// # Examples
+///
+/// ```no_run
+/// use axum::extract::{State, Query};
+/// use std::collections::HashMap;
+/// // Construct `State(AppState)` and `Query(HashMap<String, String>)` as in your application,
+/// // then call `index_handler(State(app_state), Query(params)).await` to get the response.
+///
+/// // Example (conceptual):
+/// // let mut params = HashMap::new();
+/// // params.insert("url".to_string(), "https://example.com".to_string());
+/// // let response = index_handler(State(app_state), Query(params)).await;
+/// // assert_eq!(response.into_response().status(), StatusCode::OK);
+/// ```
 async fn index_handler(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,
@@ -87,6 +115,16 @@ async fn index_handler(
     }
 }
 
+/// Fetches preview HTML for the `url` query parameter, stores the HTML in the disk-backed cache, and returns the HTML.
+///
+/// If the `url` parameter is missing this returns `400` with `"URL parameter missing"`. If caching the fetched HTML fails this returns `500` with an error message. Upstream request errors are handled by the request error handler and translated into an appropriate response.
+///
+/// # Examples
+///
+/// ```no_run
+/// // Request: GET /proxy?url=https%3A%2F%2Fexample.com
+/// // Successful response: 200 and preview HTML body.
+/// ```
 async fn proxy_url(
     State(state): State<AppState>,
     Query(params): Query<HashMap<String, String>>,

@@ -9,6 +9,23 @@ use log::debug;
 use reqwest::Method;
 use std::collections::HashMap;
 
+/// Middleware that serves cached responses for specific GET routes based on the `url` query parameter.
+///
+/// For GET requests to `/` it will return a response from the in-memory cache if present.
+/// For GET requests to `/proxy` it will return a response from a disk-backed cache if present.
+/// If no `url` parameter is provided or there is no cache hit, the request is forwarded to the next handler.
+///
+/// # Examples
+///
+/// ```
+/// use axum::{Router, routing::get, middleware};
+///
+/// async fn handler() -> &'static str { "ok" }
+///
+/// let app = Router::new()
+///     .route("/", get(handler))
+///     .layer(middleware::from_fn(crate::server::middleware::cache));
+/// ```
 #[debug_middleware]
 pub async fn cache(
     State(memory_cache): State<Cache>,
