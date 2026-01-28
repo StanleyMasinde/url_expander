@@ -14,7 +14,7 @@ pub fn create_reqwest() -> Client {
     {
         Ok(client) => client,
         Err(_) => {
-            error!("Failed to intitialize reqwest client.");
+            error!("Failed to initialise reqwest client.");
             process::exit(1)
         }
     }
