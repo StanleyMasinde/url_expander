@@ -119,9 +119,10 @@ impl Cache {
 
     #[allow(dead_code)]
     fn delete(&self, key: &str) -> CacheResult<bool> {
+        let key_hash = self.hash_key(key);
         match self.storage {
             Storage::Memory => {
-                self.entries.remove(key).unwrap();
+                self.entries.remove(&key_hash).unwrap();
                 Ok(true)
             }
             Storage::Disk => {
@@ -147,9 +148,10 @@ impl Transport for Cache {
     where
         V: Cacheable,
     {
+        let key_hash = self.hash_key(key);
         match self.storage {
             Storage::Memory => {
-                self.entries.insert(key.into(), value.to_cache_value());
+                self.entries.insert(key_hash, value.to_cache_value());
                 Ok(true)
             }
             Storage::Disk => {
@@ -159,7 +161,6 @@ impl Transport for Cache {
                         process::exit(1);
                     }
                 };
-                let key_hash = self.hash_key(key);
                 let path_string = cache_dir.join(CACHE_DIR).join(key_hash);
                 // Create parent directories if they don't exist
                 if let Some(parent) = path_string.parent() {
@@ -180,14 +181,16 @@ impl Transport for Cache {
 
     fn get(&self, key: &str) -> CacheResult<Option<String>> {
         debug!("Looking for {} in cache", key);
+        let key_hash = self.hash_key(key);
         match self.storage {
             Storage::Memory => {
-                let val = self.entries.get(key).map(|v| v.value.clone());
+                let val = self.entries.get(&key_hash).map(|v| v.value.clone());
+                debug!("Found value for {key} in memory.");
+                debug!("{:?}", val);
                 Ok(val)
             }
             Storage::Disk => {
                 let cache_dir = dirs::cache_dir().unwrap();
-                let key_hash = self.hash_key(key);
                 let content = match read_to_string(cache_dir.join(CACHE_DIR).join(key_hash)) {
                     Ok(val) => Some(val),
                     Err(e) => {
@@ -199,6 +202,7 @@ impl Transport for Cache {
                 if content.is_none() {
                     Err(CacheError::NotFound)
                 } else {
+                    debug!("Found value for {key} in disk.");
                     Ok(content)
                 }
             }
@@ -268,7 +272,7 @@ mod test {
 
         store.delete("https://rb.gy/4wqwzf").unwrap();
 
-        assert!(store.get("https://rb.gy/4wqwzf").unwrap().is_none());
+        assert!(store.get("https://rb.gy/4wqwzf").is_err());
     }
 
     #[test]
