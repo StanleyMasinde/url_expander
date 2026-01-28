@@ -1,106 +1,16 @@
 use std::{
-    fmt::Display,
     fs::{create_dir_all, read_to_string, remove_file, write},
-    path::PathBuf,
     sync::Arc,
     time::{Duration, SystemTime},
 };
 
-static CACHE_DIR: &str = "url_expander";
-
 use dashmap::DashMap;
 use log::debug;
 use sha2::{Digest, Sha256};
-use thiserror::Error;
 
-#[derive(Error, Debug)]
-pub(crate) enum CacheError {
-    #[error("Item not found in cache.")]
-    NotFound,
-
-    #[error("Path not found.")]
-    FileNotFound { path: PathBuf },
-
-    #[error("Cache directory not available.")]
-    CacheDirUnavailable,
-
-    #[error("An unknown error occoured.")]
-    UknownError,
-}
-
-#[derive(Clone)]
-pub(crate) enum Storage {
-    Memory,
-    Disk,
-}
-
-type CacheResult<T> = Result<T, CacheError>;
-
-pub trait Transport {
-    fn prune(&self) -> CacheResult<bool>;
-    fn set<V>(&self, key: &str, value: V) -> CacheResult<bool>
-    where
-        V: Cacheable;
-    fn get(&self, key: &str) -> CacheResult<Option<String>>;
-}
-
-#[derive(Debug)]
-pub struct CacheItem {
-    value: String,
-    last_update: SystemTime,
-}
-
-impl From<&str> for CacheItem {
-    fn from(value: &str) -> Self {
-        Self {
-            value: value.to_string(),
-            last_update: SystemTime::now(),
-        }
-    }
-}
-
-impl Display for CacheItem {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.value)
-    }
-}
-
-impl From<String> for CacheItem {
-    fn from(value: String) -> Self {
-        Self {
-            value,
-            last_update: SystemTime::now(),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub(crate) struct Cache {
-    entries: Arc<DashMap<String, CacheItem>>,
-    storage: Storage,
-}
-
-pub trait Cacheable {
-    fn to_cache_value(self) -> CacheItem;
-}
-
-impl Cacheable for String {
-    fn to_cache_value(self) -> CacheItem {
-        CacheItem {
-            value: self,
-            last_update: SystemTime::now(),
-        }
-    }
-}
-
-impl Cacheable for &str {
-    fn to_cache_value(self) -> CacheItem {
-        CacheItem {
-            value: self.to_string(),
-            last_update: SystemTime::now(),
-        }
-    }
-}
+use crate::types::{
+    CACHE_DIR, Cache, CacheError, CacheItem, CacheResult, Cacheable, Storage, Transport,
+};
 
 impl Cache {
     pub fn new() -> Self {

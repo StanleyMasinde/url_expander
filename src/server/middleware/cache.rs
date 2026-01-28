@@ -1,4 +1,4 @@
-use crate::utils::cache::{Cache, Storage, Transport};
+use crate::types::{Cache, DISK_CACHE, Storage, Transport};
 use axum::{
     extract::{Query, Request, State},
     middleware::Next,
@@ -8,9 +8,6 @@ use axum_macros::debug_middleware;
 use log::debug;
 use reqwest::Method;
 use std::collections::HashMap;
-use std::sync::OnceLock;
-
-static DISK_CACHE: OnceLock<Cache> = OnceLock::new();
 
 #[debug_middleware]
 pub async fn cache(

@@ -14,10 +14,8 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use crate::{
     expander, proxy, request,
     server::{AppState, middleware::cache},
-    utils::{
-        cache::{Cache, Storage, Transport},
-        reqwest_error::handle_reqwest_error,
-    },
+    types::{Cache, Storage, Transport},
+    utils::{job_runner::job_runner, reqwest_error::handle_reqwest_error},
 };
 use crate::{server::middleware::rate_limit::rate_limit, types::RateLimiter};
 
@@ -39,6 +37,8 @@ fn index_routes() -> Router {
     let limiter = RateLimiter {
         buckets: Arc::new(DashMap::new()),
     };
+
+    tokio::spawn(job_runner(state.memory_cache.clone()));
     Router::new()
         .route("/", get(index_handler))
         .route("/proxy", get(proxy_url))
