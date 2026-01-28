@@ -40,7 +40,7 @@ pub trait Transport {
 }
 
 #[derive(Debug)]
-struct CacheItem {
+pub struct CacheItem {
     value: String,
     last_update: Instant,
 }
@@ -74,7 +74,7 @@ pub(crate) struct Cache {
     storage: Storage,
 }
 
-trait Cacheable {
+pub trait Cacheable {
     fn to_cache_value(self) -> CacheItem;
 }
 

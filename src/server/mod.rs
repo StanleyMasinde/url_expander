@@ -5,6 +5,8 @@ use log::error;
 use reqwest::Client;
 use std::{env::args, io::ErrorKind, process::exit};
 
+use crate::utils::job_runner::job_runner;
+
 #[derive(Clone)]
 struct AppState {
     client: Client,
@@ -17,6 +19,8 @@ pub async fn run() {
     let address = format!("127.0.0.1:{port}");
 
     let app = Router::new().merge(routes::routes());
+
+    tokio::spawn(job_runner());
 
     let listener = match tokio::net::TcpListener::bind(address)
         .await
