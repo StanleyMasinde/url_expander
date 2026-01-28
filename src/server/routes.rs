@@ -32,7 +32,10 @@ fn index_routes() -> Router {
         .allow_methods([Method::GET])
         .allow_origin(AllowOrigin::mirror_request());
     let client = request::create_reqwest();
-    let state = AppState { client };
+    let state = AppState {
+        client,
+        memory_cache: Cache::new(),
+    };
     let limiter = RateLimiter {
         buckets: Arc::new(DashMap::new()),
     };
@@ -40,7 +43,10 @@ fn index_routes() -> Router {
         .route("/", get(index_handler))
         .route("/proxy", get(proxy_url))
         .layer(middleware::from_fn_with_state(limiter.clone(), rate_limit))
-        .layer(middleware::from_fn(cache::cache))
+        .layer(middleware::from_fn_with_state(
+            state.memory_cache.clone(),
+            cache::cache,
+        ))
         .with_state(state)
         .with_state(limiter)
         .layer(cors)
@@ -62,12 +68,12 @@ async fn index_handler(
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
     let client = state.client;
+    let cache = state.memory_cache;
 
     if let Some(url) = params.get("url") {
         match expander::expand_url(url, client).await {
             Ok(expanded_url) => {
-                let app_cache = Cache::new();
-                app_cache.set(url, expanded_url.to_string()).unwrap();
+                cache.set(url, expanded_url.to_string()).unwrap();
                 (StatusCode::OK, expanded_url)
             }
             Err(error) => handle_reqwest_error(error),

@@ -2,8 +2,8 @@ use std::{
     fmt::Display,
     fs::{create_dir_all, read_to_string, remove_file, write},
     path::PathBuf,
-    process,
-    time::{Duration, Instant},
+    sync::Arc,
+    time::{Duration, SystemTime},
 };
 
 static CACHE_DIR: &str = "url_expander";
@@ -21,10 +21,14 @@ pub(crate) enum CacheError {
     #[error("Path not found.")]
     FileNotFound { path: PathBuf },
 
+    #[error("Cache directory not available.")]
+    CacheDirUnavailable,
+
     #[error("An unknown error occoured.")]
     UknownError,
 }
 
+#[derive(Clone)]
 pub(crate) enum Storage {
     Memory,
     Disk,
@@ -43,14 +47,14 @@ pub trait Transport {
 #[derive(Debug)]
 pub struct CacheItem {
     value: String,
-    last_update: Instant,
+    last_update: SystemTime,
 }
 
 impl From<&str> for CacheItem {
     fn from(value: &str) -> Self {
         Self {
             value: value.to_string(),
-            last_update: Instant::now(),
+            last_update: SystemTime::now(),
         }
     }
 }
@@ -65,13 +69,14 @@ impl From<String> for CacheItem {
     fn from(value: String) -> Self {
         Self {
             value,
-            last_update: Instant::now(),
+            last_update: SystemTime::now(),
         }
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct Cache {
-    entries: DashMap<String, CacheItem>,
+    entries: Arc<DashMap<String, CacheItem>>,
     storage: Storage,
 }
 
@@ -83,7 +88,7 @@ impl Cacheable for String {
     fn to_cache_value(self) -> CacheItem {
         CacheItem {
             value: self,
-            last_update: Instant::now(),
+            last_update: SystemTime::now(),
         }
     }
 }
@@ -92,7 +97,7 @@ impl Cacheable for &str {
     fn to_cache_value(self) -> CacheItem {
         CacheItem {
             value: self.to_string(),
-            last_update: Instant::now(),
+            last_update: SystemTime::now(),
         }
     }
 }
@@ -100,7 +105,7 @@ impl Cacheable for &str {
 impl Cache {
     pub fn new() -> Self {
         Self {
-            entries: DashMap::new(),
+            entries: Arc::new(DashMap::new()),
             storage: Storage::Memory,
         }
     }
@@ -122,15 +127,26 @@ impl Cache {
         let key_hash = self.hash_key(key);
         match self.storage {
             Storage::Memory => {
-                self.entries.remove(&key_hash).unwrap();
-                Ok(true)
+                if self.entries.remove(&key_hash).is_some() {
+                    Ok(true)
+                } else {
+                    Err(CacheError::NotFound)
+                }
             }
             Storage::Disk => {
-                let cache_dir = dirs::cache_dir().unwrap();
-                remove_file(cache_dir.join(CACHE_DIR).join(self.hash_key(key))).unwrap();
+                let cache_dir = dirs::cache_dir().ok_or(CacheError::CacheDirUnavailable)?;
+                let path = cache_dir.join(CACHE_DIR).join(key_hash);
+                remove_file(path).map_err(|_| CacheError::NotFound)?;
                 Ok(true)
             }
         }
+    }
+
+    fn is_stale(&self, item: &CacheItem) -> bool {
+        item.last_update
+            .elapsed()
+            .map(|d| d > Duration::from_secs(24 * 60 * 60))
+            .unwrap_or(false)
     }
 }
 
@@ -155,18 +171,22 @@ impl Transport for Cache {
                 Ok(true)
             }
             Storage::Disk => {
-                let cache_dir = match dirs::cache_dir() {
-                    Some(dir) => dir,
-                    None => {
-                        process::exit(1);
-                    }
-                };
-                let path_string = cache_dir.join(CACHE_DIR).join(key_hash);
-                // Create parent directories if they don't exist
+                let cache_dir = dirs::cache_dir().ok_or(CacheError::CacheDirUnavailable)?;
+                let cache_item = value.to_cache_value();
+                let path_string = cache_dir.join(CACHE_DIR).join(&key_hash);
+
                 if let Some(parent) = path_string.parent() {
-                    create_dir_all(parent).unwrap();
+                    create_dir_all(parent).map_err(|_| CacheError::UknownError)?;
                 }
-                match write(&path_string, value.to_cache_value().value) {
+
+                let timestamp = cache_item
+                    .last_update
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
+                let content = format!("{}|{}", timestamp, cache_item.value);
+
+                match write(&path_string, content) {
                     Ok(_) => Ok(true),
                     Err(err) => match err.kind() {
                         std::io::ErrorKind::NotFound => {
@@ -184,27 +204,51 @@ impl Transport for Cache {
         let key_hash = self.hash_key(key);
         match self.storage {
             Storage::Memory => {
-                let val = self.entries.get(&key_hash).map(|v| v.value.clone());
-                debug!("Found value for {key} in memory.");
-                debug!("{:?}", val);
-                Ok(val)
+                if let Some(item) = self.entries.get(&key_hash) {
+                    if self.is_stale(&item) {
+                        drop(item);
+                        self.entries.remove(&key_hash);
+                        debug!("Item for {key} is stale, removed from cache.");
+                        return Ok(None);
+                    }
+                    let val = Some(item.value.clone());
+                    debug!("Found value for {key} in memory.");
+                    debug!("{:?}", val);
+                    Ok(val)
+                } else {
+                    Ok(None)
+                }
             }
             Storage::Disk => {
-                let cache_dir = dirs::cache_dir().unwrap();
-                let content = match read_to_string(cache_dir.join(CACHE_DIR).join(key_hash)) {
-                    Ok(val) => Some(val),
+                let cache_dir = dirs::cache_dir().ok_or(CacheError::CacheDirUnavailable)?;
+                let content = match read_to_string(cache_dir.join(CACHE_DIR).join(&key_hash)) {
+                    Ok(val) => val,
                     Err(e) => {
                         debug!("Cache not found on disk: {e}");
-                        None
+                        return Ok(None);
                     }
                 };
 
-                if content.is_none() {
-                    Err(CacheError::NotFound)
-                } else {
-                    debug!("Found value for {key} in disk.");
-                    Ok(content)
+                if let Some((timestamp_str, value)) = content.split_once('|') {
+                    if let Ok(timestamp) = timestamp_str.parse::<u64>() {
+                        let last_update = SystemTime::UNIX_EPOCH + Duration::from_secs(timestamp);
+                        let item = CacheItem {
+                            value: value.to_string(),
+                            last_update,
+                        };
+
+                        if self.is_stale(&item) {
+                            debug!("Item for {key} is stale on disk.");
+                            let _ = remove_file(cache_dir.join(CACHE_DIR).join(&key_hash));
+                            return Ok(None);
+                        }
+
+                        debug!("Found value for {key} in disk.");
+                        return Ok(Some(value.to_string()));
+                    }
                 }
+
+                Ok(None)
             }
         }
     }
@@ -215,27 +259,54 @@ impl Transport for Cache {
                 let stale_items: Vec<_> = self
                     .entries
                     .iter()
-                    .filter(|item| item.last_update.elapsed() > Duration::from_hours(24))
+                    .filter(|item| self.is_stale(&item.value()))
                     .map(|item| item.key().clone())
                     .collect();
 
                 for item in stale_items {
-                    self.entries.remove(&item).unwrap();
+                    let _ = self.entries.remove(&item);
                 }
 
                 Ok(true)
             }
-            Storage::Disk => Ok(true),
+            Storage::Disk => {
+                let cache_dir = dirs::cache_dir().ok_or(CacheError::CacheDirUnavailable)?;
+                let cache_path = cache_dir.join(CACHE_DIR);
+
+                if !cache_path.exists() {
+                    return Ok(true);
+                }
+
+                let entries = std::fs::read_dir(cache_path).map_err(|_| CacheError::UknownError)?;
+
+                for entry in entries.flatten() {
+                    if let Ok(content) = read_to_string(entry.path()) {
+                        if let Some((timestamp_str, _)) = content.split_once('|') {
+                            if let Ok(timestamp) = timestamp_str.parse::<u64>() {
+                                let last_update =
+                                    SystemTime::UNIX_EPOCH + Duration::from_secs(timestamp);
+                                let item = CacheItem {
+                                    value: String::new(),
+                                    last_update,
+                                };
+
+                                if self.is_stale(&item) {
+                                    let _ = remove_file(entry.path());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Ok(true)
+            }
         }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use std::{
-        ops::Sub,
-        time::{Duration, Instant},
-    };
+    use std::time::{Duration, SystemTime};
 
     use crate::utils::cache::{Cache, CacheItem, Storage, Transport};
 
@@ -272,7 +343,7 @@ mod test {
 
         store.delete("https://rb.gy/4wqwzf").unwrap();
 
-        assert!(store.get("https://rb.gy/4wqwzf").is_err());
+        assert!(store.get("https://rb.gy/4wqwzf").unwrap().is_none());
     }
 
     #[test]
@@ -283,21 +354,32 @@ mod test {
 
         let new_item = CacheItem {
             value: value.to_string(),
-            last_update: Instant::now().sub(Duration::from_hours(48)),
+            last_update: SystemTime::now() - Duration::from_secs(48 * 60 * 60),
         };
 
         {
             store.set(key, new_item).unwrap();
 
-            let stored_link = store.get(key).unwrap().unwrap();
+            let stored_link = store.get(key).unwrap();
 
-            assert_eq!(stored_link, value);
+            assert!(stored_link.is_none());
         }
+    }
 
-        store.prune().unwrap();
+    #[test]
+    fn test_stale_check_on_get() {
+        let store = Cache::new();
+        let key = "https://example.com/stale";
+        let value = "https://destination.com";
 
-        let stored_link = store.get(key).unwrap();
+        let stale_item = CacheItem {
+            value: value.to_string(),
+            last_update: SystemTime::now() - Duration::from_secs(48 * 60 * 60),
+        };
 
-        assert!(stored_link.is_none());
+        store.entries.insert(store.hash_key(key), stale_item);
+
+        let result = store.get(key).unwrap();
+        assert!(result.is_none());
     }
 }

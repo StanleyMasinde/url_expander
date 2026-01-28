@@ -5,11 +5,12 @@ use log::error;
 use reqwest::Client;
 use std::{env::args, io::ErrorKind, process::exit};
 
-use crate::utils::job_runner::job_runner;
+use crate::utils::{cache::Cache, job_runner::job_runner};
 
 #[derive(Clone)]
 struct AppState {
     client: Client,
+    memory_cache: Cache,
 }
 
 pub async fn run() {
