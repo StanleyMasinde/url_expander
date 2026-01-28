@@ -14,7 +14,7 @@ use tower_http::cors::{AllowOrigin, CorsLayer};
 use crate::{
     expander, proxy, request,
     server::{AppState, middleware::cache},
-    types::{Cache, Storage, Transport},
+    types::{Cache, DISK_CACHE, Storage, Transport},
     utils::{job_runner::job_runner, reqwest_error::handle_reqwest_error},
 };
 use crate::{server::middleware::rate_limit::rate_limit, types::RateLimiter};
@@ -92,7 +92,7 @@ async fn proxy_url(
     if let Some(url) = params.get("url") {
         match proxy::return_preview_html(url, client).await {
             Ok(html) => {
-                let app_cache = Cache::new().with_storage(Storage::Disk);
+                let app_cache = DISK_CACHE.get_or_init(|| Cache::new().with_storage(Storage::Disk));
                 app_cache.set(url, html.to_string()).unwrap();
                 (StatusCode::OK, html.to_string())
             }
