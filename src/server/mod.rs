@@ -13,6 +13,24 @@ struct AppState {
     memory_cache: Cache,
 }
 
+/// Start the HTTP server bound to 127.0.0.1 on the port specified by the first command-line
+/// argument or `3000` when no argument is provided.
+///
+/// The function spawns the background `job_runner`, constructs the application router from
+/// `routes::routes()`, and attempts to bind a TCP listener to the chosen address. On successful
+/// bind it prints the server address to stdout. If binding fails due to permission or address-in-use
+/// errors it logs a descriptive message and exits the process with code 1.
+///
+/// # Examples
+///
+/// ```
+/// // Start the server using the default port (3000) when running the binary.
+/// // Note: in real usage this runs indefinitely serving requests.
+/// #[tokio::main]
+/// async fn main() {
+///     my_crate::run().await;
+/// }
+/// ```
 pub async fn run() {
     let default_port = String::from("3000");
     let args: Vec<String> = args().collect();

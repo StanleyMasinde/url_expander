@@ -51,6 +51,15 @@ pub struct CacheItem {
 }
 
 impl From<&str> for CacheItem {
+    /// Creates a `CacheItem` from a string slice and sets `last_update` to the current system time.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let item = CacheItem::from("hello");
+    /// assert_eq!(item.value, "hello");
+    /// assert!(std::time::SystemTime::now().duration_since(item.last_update).is_ok());
+    /// ```
     fn from(value: &str) -> Self {
         Self {
             value: value.to_string(),
@@ -60,12 +69,29 @@ impl From<&str> for CacheItem {
 }
 
 impl Display for CacheItem {
+    /// Formats the `CacheItem` by writing its inner `value` string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let item = CacheItem { value: "expanded".to_string(), last_update: std::time::SystemTime::now() };
+    /// assert_eq!(format!("{}", item), "expanded");
+    /// ```
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.value)
     }
 }
 
 impl From<String> for CacheItem {
+    /// Creates a `CacheItem` from the provided `String` and sets `last_update` to the current system time.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crate::utils::cache::CacheItem;
+    /// let item = CacheItem::from("value".to_string());
+    /// assert_eq!(item.value, "value");
+    /// ```
     fn from(value: String) -> Self {
         Self {
             value,
@@ -85,6 +111,15 @@ pub trait Cacheable {
 }
 
 impl Cacheable for String {
+    /// Converts the `String` into a `CacheItem` using the current system time as `last_update`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let s = String::from("value");
+    /// let item = s.to_cache_value();
+    /// assert_eq!(item.value, "value");
+    /// ```
     fn to_cache_value(self) -> CacheItem {
         CacheItem {
             value: self,
@@ -94,6 +129,16 @@ impl Cacheable for String {
 }
 
 impl Cacheable for &str {
+    /// Create a CacheItem from the string, using the current system time as `last_update`.
+    ///
+    /// The returned `CacheItem` holds the original string as `value` and the time of conversion as `last_update`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let item = String::from("hello").to_cache_value();
+    /// assert_eq!(item.value, "hello");
+    /// ```
     fn to_cache_value(self) -> CacheItem {
         CacheItem {
             value: self.to_string(),
@@ -103,6 +148,17 @@ impl Cacheable for &str {
 }
 
 impl Cache {
+    /// Creates a new in-memory cache with no entries.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cache = Cache::new();
+    /// // store and retrieve a value
+    /// cache.set("key", "value").unwrap();
+    /// let val = cache.get("key").unwrap();
+    /// assert_eq!(val, Some("value".to_string()));
+    /// ```
     pub fn new() -> Self {
         Self {
             entries: Arc::new(DashMap::new()),
@@ -110,11 +166,37 @@ impl Cache {
         }
     }
 
+    /// Sets the storage backend for this cache and returns the configured instance.
+    ///
+    /// `store` specifies the storage backend to use for subsequent cache operations.
+    ///
+    /// # Returns
+    ///
+    /// The cache instance configured to use `store`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let _ = Cache::new().with_storage(Storage::Disk);
+    /// ```
     pub fn with_storage(mut self, store: Storage) -> Self {
         self.storage = store;
         self
     }
 
+    /// Compute the SHA-256 digest of `key` and return it as a lowercase hexadecimal string.
+    ///
+    /// # Returns
+    ///
+    /// The 64-character lowercase hex representation of the SHA-256 hash of `key`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cache = Cache::new();
+    /// let h = cache.hash_key("example");
+    /// assert_eq!(h.len(), 64);
+    /// ```
     fn hash_key(&self, key: &str) -> String {
         let mut hasher = Sha256::new();
         hasher.update(key);
@@ -122,6 +204,28 @@ impl Cache {
         format!("{:x}", hex)
     }
 
+    /// Remove the cached entry for `key` from the currently configured storage backend.
+    ///
+    /// Deletes the entry identified by `key` from either the in-memory store or the on-disk cache,
+    /// depending on the cache's storage configuration.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the entry was found and removed.
+    ///
+    /// # Errors
+    ///
+    /// - `CacheError::NotFound` if the entry does not exist or the file could not be removed on disk.
+    /// - `CacheError::CacheDirUnavailable` if the system cache directory cannot be determined (disk storage).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut cache = Cache::new().with_storage(Storage::Memory);
+    /// cache.set("foo", "bar").unwrap();
+    /// assert!(cache.delete("foo").unwrap());
+    /// assert!(cache.get("foo").unwrap().is_none());
+    /// ```
     #[allow(dead_code)]
     fn delete(&self, key: &str) -> CacheResult<bool> {
         let key_hash = self.hash_key(key);
@@ -142,6 +246,25 @@ impl Cache {
         }
     }
 
+    /// Checks whether a cache item is older than 24 hours.
+    ///
+    /// # Returns
+    ///
+    /// `true` if the item's `last_update` is more than 24 hours ago, `false` otherwise.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::time::{SystemTime, Duration};
+    /// // create a cache and items for demonstration
+    /// let cache = Cache::new();
+    ///
+    /// let fresh = CacheItem { value: "a".into(), last_update: SystemTime::now() };
+    /// assert!(!cache.is_stale(&fresh));
+    ///
+    /// let stale = CacheItem { value: "b".into(), last_update: SystemTime::now() - Duration::from_secs(48 * 60 * 60) };
+    /// assert!(cache.is_stale(&stale));
+    /// ```
     fn is_stale(&self, item: &CacheItem) -> bool {
         item.last_update
             .elapsed()
@@ -151,6 +274,15 @@ impl Cache {
 }
 
 impl Cacheable for CacheItem {
+    /// Produce an owned `CacheItem` with the same `value` and `last_update`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let original = CacheItem { value: "v".into(), last_update: std::time::SystemTime::now() };
+    /// let owned = original.to_cache_value();
+    /// assert_eq!(owned.value, "v");
+    /// ```
     fn to_cache_value(self) -> CacheItem {
         CacheItem {
             value: self.value,
@@ -160,6 +292,21 @@ impl Cacheable for CacheItem {
 }
 
 impl Transport for Cache {
+    /// Stores a cacheable value under the given key using the cache's configured storage backend.
+    ///
+    /// When the cache is configured for disk storage, the cache directory will be created if needed and the item is persisted as `timestamp|value`.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(true)` if the value was stored successfully, `Err(CacheError)` on failure.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cache = Cache::new();
+    /// cache.set("user:1", "Alice").unwrap();
+    /// assert_eq!(cache.get("user:1").unwrap().as_deref(), Some("Alice"));
+    /// ```
     fn set<V>(&self, key: &str, value: V) -> CacheResult<bool>
     where
         V: Cacheable,
@@ -199,6 +346,23 @@ impl Transport for Cache {
         }
     }
 
+    /// Retrieves a cached string for `key` if present and not expired.
+    ///
+    /// Returns `Ok(Some(value))` when a non-stale cached value is found, `Ok(None)` when the key
+    /// is missing or the stored item is stale (it will be removed), and `Err(CacheError::CacheDirUnavailable)`
+    /// if the disk cache is selected but the system cache directory cannot be determined.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cache = Cache::new();
+    /// // nothing stored yet
+    /// assert!(cache.get("missing").unwrap().is_none());
+    ///
+    /// let cache = cache.with_storage(Storage::Memory);
+    /// cache.set("k", "v").unwrap();
+    /// assert_eq!(cache.get("k").unwrap(), Some("v".to_string()));
+    /// ```
     fn get(&self, key: &str) -> CacheResult<Option<String>> {
         debug!("Looking for {} in cache", key);
         let key_hash = self.hash_key(key);
@@ -253,6 +417,18 @@ impl Transport for Cache {
         }
     }
 
+    /// Removes stale cache entries according to the configured storage backend.
+    ///
+    /// For in-memory storage this evicts entries older than 24 hours from the internal map.
+    /// For disk storage this removes files whose stored timestamp is older than 24 hours.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let cache = Cache::new();
+    /// // prune returns Ok(true) when the operation completes successfully
+    /// assert!(cache.prune().unwrap());
+    /// ```
     fn prune(&self) -> CacheResult<bool> {
         match self.storage {
             Storage::Memory => {

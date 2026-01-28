@@ -12,6 +12,36 @@ use std::sync::OnceLock;
 
 static DISK_CACHE: OnceLock<Cache> = OnceLock::new();
 
+/// Middleware that serves cached responses for GET requests based on a `url` query parameter.
+///
+/// When the query parameter `url` is missing the request is forwarded to the next handler.
+/// - For GET requests to path `/`, attempts to return a cached response from the provided in-memory cache.
+/// - For GET requests to path `/proxy`, attempts to return a cached response from a disk-backed cache (lazily initialized).
+/// If a cache entry is found its body is returned as the response; on cache miss the request is forwarded to `next`.
+///
+/// # Returns
+///
+/// A `Response` containing the cached body when a cache hit occurs, or the response produced by calling `next.run(request).await` when there is no hit.
+///
+/// # Examples
+///
+/// ```
+/// // Illustrative example (types and values simplified)
+/// # use std::collections::HashMap;
+/// # use axum::extract::State;
+/// # use axum::extract::Query;
+/// # use axum::http::Request;
+/// # use axum::response::Response;
+/// # async fn example(cache: crate::cache::Cache, next: axum::middleware::Next) {
+/// let mut params = HashMap::new();
+/// params.insert("url".to_string(), "https://example.com".to_string());
+/// let state = State(cache);
+/// let query = Query(params);
+/// let request = Request::builder().uri("/?url=https://example.com").body(()).unwrap();
+/// let response: Response = crate::server::middleware::cache(state, query, request, next).await;
+/// # drop(response);
+/// # }
+/// ```
 #[debug_middleware]
 pub async fn cache(
     State(memory_cache): State<Cache>,
