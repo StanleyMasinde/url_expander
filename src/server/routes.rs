@@ -8,7 +8,7 @@ use axum::{
     routing::get,
 };
 use dashmap::DashMap;
-use log::{error, warn};
+use log::error;
 use reqwest::{Method, StatusCode};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 

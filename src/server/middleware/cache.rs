@@ -25,10 +25,7 @@ pub async fn cache(
 
     if request_method == Method::GET && request_path == "/" {
         debug!("Looking for cache in memory");
-        let cache_entry = match memory_cache.get(url) {
-            Ok(ent) => ent,
-            Err(_) => None,
-        };
+        let cache_entry = memory_cache.get(url).unwrap_or_default();
         if let Some(entry) = cache_entry {
             return Response::builder()
                 .body(entry.into())
@@ -38,10 +35,7 @@ pub async fn cache(
     if request_method == Method::GET && request_path == "/proxy" {
         debug!("Looking for cache in disk");
         let cache = DISK_CACHE.get_or_init(|| Cache::new().with_storage(Storage::Disk));
-        let cache_entry = match cache.get(url) {
-            Ok(ent) => ent,
-            Err(_) => None,
-        };
+        let cache_entry = cache.get(url).unwrap_or_default();
         if let Some(entry) = cache_entry {
             return Response::builder()
                 .body(entry.into())

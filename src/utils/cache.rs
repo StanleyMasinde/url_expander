@@ -139,23 +139,23 @@ impl Transport for Cache {
                     }
                 };
 
-                if let Some((timestamp_str, value)) = content.split_once('|') {
-                    if let Ok(timestamp) = timestamp_str.parse::<u64>() {
-                        let last_update = SystemTime::UNIX_EPOCH + Duration::from_secs(timestamp);
-                        let item = CacheItem {
-                            value: value.to_string(),
-                            last_update,
-                        };
+                if let Some((timestamp_str, value)) = content.split_once('|')
+                    && let Ok(timestamp) = timestamp_str.parse::<u64>()
+                {
+                    let last_update = SystemTime::UNIX_EPOCH + Duration::from_secs(timestamp);
+                    let item = CacheItem {
+                        value: value.to_string(),
+                        last_update,
+                    };
 
-                        if self.is_stale(&item) {
-                            debug!("Item for {key} is stale on disk.");
-                            let _ = remove_file(cache_dir.join(CACHE_DIR).join(&key_hash));
-                            return Ok(None);
-                        }
-
-                        debug!("Found value for {key} in disk.");
-                        return Ok(Some(value.to_string()));
+                    if self.is_stale(&item) {
+                        debug!("Item for {key} is stale on disk.");
+                        let _ = remove_file(cache_dir.join(CACHE_DIR).join(&key_hash));
+                        return Ok(None);
                     }
+
+                    debug!("Found value for {key} in disk.");
+                    return Ok(Some(value.to_string()));
                 }
 
                 Ok(None)
@@ -169,7 +169,7 @@ impl Transport for Cache {
                 let stale_items: Vec<_> = self
                     .entries
                     .iter()
-                    .filter(|item| self.is_stale(&item.value()))
+                    .filter(|item| self.is_stale(item.value()))
                     .map(|item| item.key().clone())
                     .collect();
 
@@ -190,20 +190,18 @@ impl Transport for Cache {
                 let entries = std::fs::read_dir(cache_path).map_err(|_| CacheError::UknownError)?;
 
                 for entry in entries.flatten() {
-                    if let Ok(content) = read_to_string(entry.path()) {
-                        if let Some((timestamp_str, _)) = content.split_once('|') {
-                            if let Ok(timestamp) = timestamp_str.parse::<u64>() {
-                                let last_update =
-                                    SystemTime::UNIX_EPOCH + Duration::from_secs(timestamp);
-                                let item = CacheItem {
-                                    value: String::new(),
-                                    last_update,
-                                };
+                    if let Ok(content) = read_to_string(entry.path())
+                        && let Some((timestamp_str, _)) = content.split_once('|')
+                        && let Ok(timestamp) = timestamp_str.parse::<u64>()
+                    {
+                        let last_update = SystemTime::UNIX_EPOCH + Duration::from_secs(timestamp);
+                        let item = CacheItem {
+                            value: String::new(),
+                            last_update,
+                        };
 
-                                if self.is_stale(&item) {
-                                    let _ = remove_file(entry.path());
-                                }
-                            }
+                        if self.is_stale(&item) {
+                            let _ = remove_file(entry.path());
                         }
                     }
                 }
