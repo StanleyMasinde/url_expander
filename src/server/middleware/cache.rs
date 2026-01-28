@@ -23,10 +23,8 @@ pub async fn cache(
         let url_to_expand = params.get("url").unwrap();
         let cache_entry = cache.get(url_to_expand).unwrap();
 
-        if cache_entry.is_some() {
-            return Response::builder()
-                .body(cache_entry.unwrap().into())
-                .unwrap();
+        if let Some(entry) = cache_entry {
+            return Response::builder().body(entry.into()).unwrap();
         }
     };
 
@@ -35,13 +33,10 @@ pub async fn cache(
         let url_to_proxy = params.get("url").unwrap();
         let cache_entry = cache.get(url_to_proxy).unwrap();
 
-        if cache_entry.is_some() {
-            return Response::builder()
-                .body(cache_entry.unwrap().into())
-                .unwrap();
+        if let Some(entry) = cache_entry {
+            return Response::builder().body(entry.into()).unwrap();
         }
     }
 
-    let response = next.run(request).await;
-    response
+    next.run(request).await
 }

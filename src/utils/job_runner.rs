@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use log::debug;
 use tokio::time::interval;
 
 use crate::utils::cache::{Cache, Transport};
@@ -11,6 +12,6 @@ pub async fn job_runner() {
     loop {
         ticker.tick().await;
         app_cache.prune().unwrap();
-        println!("Job run")
+        debug!("Job run")
     }
 }

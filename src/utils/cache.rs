@@ -2,12 +2,14 @@ use std::{
     fmt::Display,
     fs::{create_dir_all, read_to_string, remove_file, write},
     path::PathBuf,
+    process,
     time::{Duration, Instant},
 };
 
 static CACHE_DIR: &str = "url_expander";
 
 use dashmap::DashMap;
+use log::debug;
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
@@ -36,7 +38,6 @@ pub trait Transport {
     where
         V: Cacheable;
     fn get(&self, key: &str) -> CacheResult<Option<String>>;
-    fn delete(&self, key: &str) -> CacheResult<bool>;
 }
 
 #[derive(Debug)]
@@ -115,6 +116,21 @@ impl Cache {
         let hex = hasher.finalize();
         format!("{:x}", hex)
     }
+
+    #[allow(dead_code)]
+    fn delete(&self, key: &str) -> CacheResult<bool> {
+        match self.storage {
+            Storage::Memory => {
+                self.entries.remove(key).unwrap();
+                Ok(true)
+            }
+            Storage::Disk => {
+                let cache_dir = dirs::cache_dir().unwrap();
+                remove_file(cache_dir.join(CACHE_DIR).join(self.hash_key(key))).unwrap();
+                Ok(true)
+            }
+        }
+    }
 }
 
 impl Cacheable for CacheItem {
@@ -137,7 +153,12 @@ impl Transport for Cache {
                 Ok(true)
             }
             Storage::Disk => {
-                let cache_dir = dirs::cache_dir().unwrap();
+                let cache_dir = match dirs::cache_dir() {
+                    Some(dir) => dir,
+                    None => {
+                        process::exit(1);
+                    }
+                };
                 let key_hash = self.hash_key(key);
                 let path_string = cache_dir.join(CACHE_DIR).join(key_hash);
                 // Create parent directories if they don't exist
@@ -158,6 +179,7 @@ impl Transport for Cache {
     }
 
     fn get(&self, key: &str) -> CacheResult<Option<String>> {
+        debug!("Looking for {} in cache", key);
         match self.storage {
             Storage::Memory => {
                 let val = self.entries.get(key).map(|v| v.value.clone());
@@ -168,23 +190,17 @@ impl Transport for Cache {
                 let key_hash = self.hash_key(key);
                 let content = match read_to_string(cache_dir.join(CACHE_DIR).join(key_hash)) {
                     Ok(val) => Some(val),
-                    Err(_) => None,
+                    Err(e) => {
+                        debug!("Cache not found on disk: {e}");
+                        None
+                    }
                 };
-                Ok(content)
-            }
-        }
-    }
 
-    fn delete(&self, key: &str) -> CacheResult<bool> {
-        match self.storage {
-            Storage::Memory => {
-                self.entries.remove(key).unwrap();
-                Ok(true)
-            }
-            Storage::Disk => {
-                let cache_dir = dirs::cache_dir().unwrap();
-                remove_file(cache_dir.join(CACHE_DIR).join(self.hash_key(key))).unwrap();
-                Ok(true)
+                if content.is_none() {
+                    Err(CacheError::NotFound)
+                } else {
+                    Ok(content)
+                }
             }
         }
     }
