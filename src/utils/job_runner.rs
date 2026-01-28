@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use log::debug;
+use log::{debug, warn};
 use tokio::time::interval;
 
 use crate::types::{Cache, Transport};
@@ -10,7 +10,9 @@ pub async fn job_runner(app_cache: Cache) {
 
     loop {
         ticker.tick().await;
-        app_cache.prune().unwrap();
+        if let Err(e) = app_cache.prune() {
+            warn!("Failed to prune cache: {}", e)
+        };
         debug!("Job run")
     }
 }
