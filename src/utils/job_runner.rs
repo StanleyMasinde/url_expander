@@ -11,6 +11,8 @@ pub async fn job_runner() {
 
     loop {
         ticker.tick().await;
+        // I am not sure how in memory will work. It should not be a problem since the base cache
+        // checks this.
         app_cache.prune().unwrap();
         debug!("Job run")
     }
