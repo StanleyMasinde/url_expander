@@ -8,6 +8,7 @@ use axum::{
     routing::get,
 };
 use dashmap::DashMap;
+use log::{error, warn};
 use reqwest::{Method, StatusCode};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
@@ -73,7 +74,10 @@ async fn index_handler(
     if let Some(url) = params.get("url") {
         match expander::expand_url(url, client).await {
             Ok(expanded_url) => {
-                cache.set(url, expanded_url.to_string()).unwrap();
+                if let Err(e) = cache.set(url, expanded_url.to_string()) {
+                    error!("Failed to expand {}: {}", url, e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, "An error occoured while trying to expand the url. Our team has been notified".into());
+                };
                 (StatusCode::OK, expanded_url)
             }
             Err(error) => handle_reqwest_error(error),
@@ -93,7 +97,10 @@ async fn proxy_url(
         match proxy::return_preview_html(url, client).await {
             Ok(html) => {
                 let app_cache = DISK_CACHE.get_or_init(|| Cache::new().with_storage(Storage::Disk));
-                app_cache.set(url, html.to_string()).unwrap();
+                if let Err(e) = app_cache.set(url, html.to_string()) {
+                    error!("Failed to proxy {}: {}", url, e);
+                    return (StatusCode::INTERNAL_SERVER_ERROR, "An error occoured while trying to fetch the preview for {}, our team has been notified.".into());
+                };
                 (StatusCode::OK, html.to_string())
             }
             Err(error) => handle_reqwest_error(error),
