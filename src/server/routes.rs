@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use axum::{
     Router,
     extract::{Query, State},
+    http::HeaderName,
     middleware,
     response::IntoResponse,
     routing::get,
@@ -13,23 +14,51 @@ use reqwest::{Method, StatusCode};
 use tower_http::cors::{AllowOrigin, CorsLayer};
 
 use crate::{
+    auth::service::AuthService,
     expander, proxy, request,
-    server::{AppState, middleware::cache},
-    types::{Cache, DISK_CACHE, Storage, Transport},
+    server::{
+        AppState,
+        auth::{auth_disabled_routes, auth_routes},
+        middleware::cache,
+    },
+    types::{Cache, DISK_CACHE, RateLimiter, Storage, Transport},
     utils::{job_runner::job_runner, reqwest_error::handle_reqwest_error},
 };
-use crate::{server::middleware::rate_limit::rate_limit, types::RateLimiter};
+
+use crate::server::middleware::rate_limit::rate_limit;
 
 pub fn routes() -> Router {
-    Router::new()
+    routes_with_auth(None)
+}
+
+pub fn routes_with_auth(auth_service: Option<Arc<AuthService>>) -> Router {
+    let cors = CorsLayer::new()
+        .allow_methods([Method::GET, Method::POST])
+        .allow_origin(AllowOrigin::mirror_request())
+        .allow_headers([
+            HeaderName::from_static("authorization"),
+            HeaderName::from_static("content-type"),
+        ])
+        .expose_headers([
+            HeaderName::from_static("x-ratelimit-limit"),
+            HeaderName::from_static("x-ratelimit-remaining"),
+            HeaderName::from_static("x-ratelimit-reset"),
+            HeaderName::from_static("retry-after"),
+        ])
+        .max_age(std::time::Duration::from_secs(3600));
+
+    let app = Router::new()
         .nest("/api", api_routes())
         .merge(index_routes())
+        .layer(cors);
+
+    match auth_service {
+        Some(service) => app.merge(auth_routes(service)),
+        None => app.merge(auth_disabled_routes()),
+    }
 }
 
 fn index_routes() -> Router {
-    let cors = CorsLayer::new()
-        .allow_methods([Method::GET])
-        .allow_origin(AllowOrigin::mirror_request());
     let client = request::create_reqwest();
     let state = AppState {
         client,
@@ -50,16 +79,12 @@ fn index_routes() -> Router {
         ))
         .with_state(state)
         .with_state(limiter)
-        .layer(cors)
 }
 
 fn api_routes() -> Router {
     Router::new().route("/health", get(health_handler))
 }
 
-///
-/// Methods here
-///
 async fn health_handler() -> impl IntoResponse {
     (StatusCode::OK, "OK".to_string())
 }

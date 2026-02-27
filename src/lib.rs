@@ -1,3 +1,5 @@
+pub mod auth;
+mod config;
 mod expander;
 mod proxy;
 mod request;

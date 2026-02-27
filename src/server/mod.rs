@@ -1,11 +1,13 @@
+pub mod auth;
 pub mod middleware;
 pub mod routes;
-use axum::Router;
-use log::error;
-use reqwest::Client;
-use std::{env::args, io::ErrorKind, process::exit};
 
-use crate::types::Cache;
+use axum::Router;
+use log::{error, warn};
+use reqwest::Client;
+use std::io::ErrorKind;
+
+use crate::{auth::build_auth_service, types::Cache};
 
 #[derive(Clone)]
 struct AppState {
@@ -14,12 +16,19 @@ struct AppState {
 }
 
 pub async fn run() {
-    let default_port = String::from("3000");
-    let args: Vec<String> = args().collect();
-    let port = args.get(1).unwrap_or(&default_port);
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let address = format!("127.0.0.1:{port}");
 
-    let app = Router::new().merge(routes::routes());
+    let auth_service = match build_auth_service().await {
+        Ok(service) => Some(service),
+        Err(message) => {
+            warn!("failed to initialize auth service: {}", message);
+            warn!("auth routes are running in service-unavailable mode");
+            None
+        }
+    };
+
+    let app: Router = routes::routes_with_auth(auth_service);
 
     let listener = match tokio::net::TcpListener::bind(address)
         .await
@@ -35,9 +44,10 @@ pub async fn run() {
                 error!("Could not start the server {error}")
             }
 
-            exit(1)
+            std::process::exit(1)
         }
     };
+
     axum::serve(listener, app)
         .await
         .expect("Failed to start Axum.");
