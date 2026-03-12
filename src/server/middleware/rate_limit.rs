@@ -52,15 +52,17 @@ pub async fn rate_limit(
     }
 
     bucket.tokens -= 1.0;
+    let rate_limit_remaining: HeaderValue = bucket.tokens.to_string().parse().unwrap();
+    drop(bucket); // Force drop here to avoid a deadlock when fingerprints match
+
     let mut response = next.run(request).await;
 
     response
         .headers_mut()
         .insert("X-RateLimit-Limit", CAPACITY.to_string().parse().unwrap());
-    response.headers_mut().insert(
-        "X-RateLimit-Remaining",
-        bucket.tokens.to_string().parse().unwrap(),
-    );
+    response
+        .headers_mut()
+        .insert("X-RateLimit-Remaining", rate_limit_remaining);
     let current_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     response.headers_mut().insert(
         "X-RateLimit-Reset",
