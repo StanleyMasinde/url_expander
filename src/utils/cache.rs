@@ -1,5 +1,4 @@
 use std::{
-    fs::{create_dir_all, read_to_string, remove_file, write},
     sync::Arc,
     time::{Duration, SystemTime},
 };
@@ -7,6 +6,7 @@ use std::{
 use dashmap::DashMap;
 use log::debug;
 use sha2::{Digest, Sha256};
+use tokio::fs::{create_dir_all, read_to_string, remove_file, write};
 
 use crate::types::{
     CACHE_DIR, Cache, CacheError, CacheItem, CacheResult, Cacheable, Storage, Transport,
@@ -33,7 +33,7 @@ impl Cache {
     }
 
     #[allow(dead_code)]
-    fn delete(&self, key: &str) -> CacheResult<bool> {
+    async fn delete(&self, key: &str) -> CacheResult<bool> {
         let key_hash = self.hash_key(key);
         match self.storage {
             Storage::Memory => {
@@ -46,7 +46,7 @@ impl Cache {
             Storage::Disk => {
                 let cache_dir = dirs::cache_dir().ok_or(CacheError::CacheDirUnavailable)?;
                 let path = cache_dir.join(CACHE_DIR).join(key_hash);
-                remove_file(path).map_err(|_| CacheError::NotFound)?;
+                remove_file(path).await.map_err(|_| CacheError::NotFound)?;
                 Ok(true)
             }
         }
@@ -70,7 +70,7 @@ impl Cacheable for CacheItem {
 }
 
 impl Transport for Cache {
-    fn set<V>(&self, key: &str, value: V) -> CacheResult<bool>
+    async fn set<V>(&self, key: &str, value: V) -> CacheResult<bool>
     where
         V: Cacheable,
     {
@@ -86,7 +86,9 @@ impl Transport for Cache {
                 let path_string = cache_dir.join(CACHE_DIR).join(&key_hash);
 
                 if let Some(parent) = path_string.parent() {
-                    create_dir_all(parent).map_err(|_| CacheError::UknownError)?;
+                    create_dir_all(parent)
+                        .await
+                        .map_err(|_| CacheError::UknownError)?;
                 }
 
                 let timestamp = cache_item
@@ -96,7 +98,7 @@ impl Transport for Cache {
                     .as_secs();
                 let content = format!("{}|{}", timestamp, cache_item.value);
 
-                match write(&path_string, content) {
+                match write(&path_string, content).await {
                     Ok(_) => Ok(true),
                     Err(err) => match err.kind() {
                         std::io::ErrorKind::NotFound => {
@@ -109,7 +111,7 @@ impl Transport for Cache {
         }
     }
 
-    fn get(&self, key: &str) -> CacheResult<Option<String>> {
+    async fn get(&self, key: &str) -> CacheResult<Option<String>> {
         debug!("Looking for {} in cache", key);
         let key_hash = self.hash_key(key);
         match self.storage {
@@ -131,7 +133,8 @@ impl Transport for Cache {
             }
             Storage::Disk => {
                 let cache_dir = dirs::cache_dir().ok_or(CacheError::CacheDirUnavailable)?;
-                let content = match read_to_string(cache_dir.join(CACHE_DIR).join(&key_hash)) {
+                let content = match read_to_string(cache_dir.join(CACHE_DIR).join(&key_hash)).await
+                {
                     Ok(val) => val,
                     Err(e) => {
                         debug!("Cache not found on disk: {e}");
@@ -150,7 +153,7 @@ impl Transport for Cache {
 
                     if self.is_stale(&item) {
                         debug!("Item for {key} is stale on disk.");
-                        let _ = remove_file(cache_dir.join(CACHE_DIR).join(&key_hash));
+                        let _ = remove_file(cache_dir.join(CACHE_DIR).join(&key_hash)).await;
                         return Ok(None);
                     }
 
@@ -163,7 +166,7 @@ impl Transport for Cache {
         }
     }
 
-    fn prune(&self) -> CacheResult<bool> {
+    async fn prune(&self) -> CacheResult<bool> {
         match self.storage {
             Storage::Memory => {
                 let stale_items: Vec<_> = self
@@ -190,7 +193,7 @@ impl Transport for Cache {
                 let entries = std::fs::read_dir(cache_path).map_err(|_| CacheError::UknownError)?;
 
                 for entry in entries.flatten() {
-                    if let Ok(content) = read_to_string(entry.path())
+                    if let Ok(content) = read_to_string(entry.path()).await
                         && let Some((timestamp_str, _)) = content.split_once('|')
                         && let Ok(timestamp) = timestamp_str.parse::<u64>()
                     {
@@ -201,7 +204,7 @@ impl Transport for Cache {
                         };
 
                         if self.is_stale(&item) {
-                            let _ = remove_file(entry.path());
+                            let _ = remove_file(entry.path()).await;
                         }
                     }
                 }
@@ -218,44 +221,46 @@ mod test {
 
     use crate::utils::cache::{Cache, CacheItem, Storage, Transport};
 
-    #[test]
-    fn test_in_memory_cache() {
+    #[tokio::test]
+    async fn test_in_memory_cache() {
         let store = Cache::new();
         store
             .set("https://rb.gy/4wqwzf", "https://stanleymasinde.com")
+            .await
             .unwrap();
         let result = store.get("https://rb.gy/4wqwzf");
 
         assert_eq!(
-            result.unwrap().unwrap(),
+            result.await.unwrap().unwrap(),
             "https://stanleymasinde.com".to_string()
         );
 
-        store.delete("https://rb.gy/4wqwzf").unwrap();
+        store.delete("https://rb.gy/4wqwzf").await.unwrap();
 
-        assert!(store.get("https://rb.gy/4wqwzf").unwrap().is_none());
+        assert!(store.get("https://rb.gy/4wqwzf").await.unwrap().is_none());
     }
 
-    #[test]
-    fn test_in_disk_cache() {
+    #[tokio::test]
+    async fn test_in_disk_cache() {
         let store = Cache::new().with_storage(Storage::Disk);
         store
             .set("https://rb.gy/4wqwzf", "https://stanleymasinde.com")
+            .await
             .unwrap();
         let result = store.get("https://rb.gy/4wqwzf");
 
         assert_eq!(
-            result.unwrap(),
+            result.await.unwrap(),
             Some("https://stanleymasinde.com".to_string())
         );
 
-        store.delete("https://rb.gy/4wqwzf").unwrap();
+        store.delete("https://rb.gy/4wqwzf").await.unwrap();
 
-        assert!(store.get("https://rb.gy/4wqwzf").unwrap().is_none());
+        assert!(store.get("https://rb.gy/4wqwzf").await.unwrap().is_none());
     }
 
-    #[test]
-    fn test_prune_cache() {
+    #[tokio::test]
+    async fn test_prune_cache() {
         let store = Cache::new();
         let key = "https://shortl.ink/4wqwzf";
         let value = "https://stanleymasinde.com";
@@ -266,16 +271,16 @@ mod test {
         };
 
         {
-            store.set(key, new_item).unwrap();
+            store.set(key, new_item).await.unwrap();
 
-            let stored_link = store.get(key).unwrap();
+            let stored_link = store.get(key).await.unwrap();
 
             assert!(stored_link.is_none());
         }
     }
 
-    #[test]
-    fn test_stale_check_on_get() {
+    #[tokio::test]
+    async fn test_stale_check_on_get() {
         let store = Cache::new();
         let key = "https://example.com/stale";
         let value = "https://destination.com";
@@ -287,7 +292,7 @@ mod test {
 
         store.entries.insert(store.hash_key(key), stale_item);
 
-        let result = store.get(key).unwrap();
+        let result = store.get(key).await.unwrap();
         assert!(result.is_none());
     }
 }

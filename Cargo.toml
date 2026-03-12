@@ -14,7 +14,7 @@ rand = "0.10.0"
 reqwest = { version="0.13.2", default-features = false, features = ['json', 'gzip', 'brotli', 'deflate', 'cookies', 'default-tls']}
 sha2 = "0.10.9"
 thiserror = "2.0.18"
-tokio = { version ="1.50.0", features=['macros', 'rt']}
+tokio = { version ="1.50.0", features=['macros', 'rt', 'fs']}
 tower-http = { version = "0.6.8", features = ['cors']}
 
 [dev-dependencies]

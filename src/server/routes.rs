@@ -74,7 +74,7 @@ async fn index_handler(
     if let Some(url) = params.get("url") {
         match expander::expand_url(url, client).await {
             Ok(expanded_url) => {
-                if let Err(e) = cache.set(url, expanded_url.to_string()) {
+                if let Err(e) = cache.set(url, expanded_url.to_string()).await {
                     error!("Failed to expand {}: {}", url, e);
                     return (StatusCode::INTERNAL_SERVER_ERROR, "An error occoured while trying to expand the url. Our team has been notified".into());
                 };
@@ -97,7 +97,7 @@ async fn proxy_url(
         match proxy::return_preview_html(url, client).await {
             Ok(html) => {
                 let app_cache = DISK_CACHE.get_or_init(|| Cache::new().with_storage(Storage::Disk));
-                if let Err(e) = app_cache.set(url, html.to_string()) {
+                if let Err(e) = app_cache.set(url, html.to_string()).await {
                     error!("Failed to proxy {}: {}", url, e);
                     return (StatusCode::INTERNAL_SERVER_ERROR, "An error occoured while trying to fetch the preview for {}, our team has been notified.".into());
                 };

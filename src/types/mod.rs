@@ -46,11 +46,11 @@ pub(crate) enum Storage {
 }
 
 pub trait Transport {
-    fn prune(&self) -> CacheResult<bool>;
-    fn set<V>(&self, key: &str, value: V) -> CacheResult<bool>
+    async fn prune(&self) -> CacheResult<bool>;
+    async fn set<V>(&self, key: &str, value: V) -> CacheResult<bool>
     where
         V: Cacheable;
-    fn get(&self, key: &str) -> CacheResult<Option<String>>;
+    async fn get(&self, key: &str) -> CacheResult<Option<String>>;
 }
 
 #[derive(Debug)]

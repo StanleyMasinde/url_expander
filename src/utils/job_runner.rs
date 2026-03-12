@@ -10,7 +10,7 @@ pub async fn job_runner(app_cache: Cache) {
 
     loop {
         ticker.tick().await;
-        if let Err(e) = app_cache.prune() {
+        if let Err(e) = app_cache.prune().await {
             warn!("Failed to prune cache: {}", e)
         };
         debug!("Job run")
