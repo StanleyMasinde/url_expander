@@ -8,16 +8,16 @@ axum = "0.8.8"
 axum-macros = "0.5.0"
 dashmap = "6.1.0"
 dirs = "6.0.0"
-env_logger = "0.11.8"
+env_logger = "0.11.9"
 log = "0.4.29"
-rand = "0.9.2"
-reqwest = { version="0.13.1", default-features = false, features = ['json', 'gzip', 'brotli', 'deflate', 'cookies', 'default-tls']}
+rand = "0.10.0"
+reqwest = { version="0.13.2", default-features = false, features = ['json', 'gzip', 'brotli', 'deflate', 'cookies', 'default-tls']}
 sha2 = "0.10.9"
 thiserror = "2.0.18"
-tokio = { version ="1.49.0", features=['macros', 'rt-multi-thread']}
+tokio = { version ="1.50.0", features=['macros', 'rt']}
 tower-http = { version = "0.6.8", features = ['cors']}
 
 [dev-dependencies]
 axum-macros = "0.5.0"
 pretty_assertions = "1.4.1"
-tower = { version = "0.5.2", features = ["util"] }
+tower = { version = "0.5.3", features = ["util"] }
