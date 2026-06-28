@@ -195,7 +195,10 @@ impl Transport for Cache {
                     return Ok(true);
                 }
 
-                let entries = std::fs::read_dir(cache_path).map_err(|_| CacheError::UknownError)?;
+                let entries =
+                    std::fs::read_dir(cache_path).map_err(|err| CacheError::UknownError {
+                        message: err.to_string(),
+                    })?;
 
                 for entry in entries.flatten() {
                     if let Ok(content) = read_to_string(entry.path()).await
