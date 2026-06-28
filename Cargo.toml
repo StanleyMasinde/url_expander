@@ -4,20 +4,20 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-axum = "0.8.8"
-axum-macros = "0.5.0"
-dashmap = "6.1.0"
+axum = "0.8.9"
+axum-macros = "0.5.1"
+dashmap = "6.2.1"
 dirs = "6.0.0"
-env_logger = "0.11.9"
-log = "0.4.29"
-rand = "0.10.0"
-reqwest = { version="0.13.2", default-features = false, features = ['json', 'gzip', 'brotli', 'deflate', 'cookies', 'default-tls']}
-sha2 = "0.10.9"
+env_logger = "0.11.11"
+log = "0.4.33"
+rand = "0.10.1"
+reqwest = { version="0.13.4", default-features = false, features = ['json', 'gzip', 'brotli', 'deflate', 'cookies', 'default-tls']}
+sha2 = "0.11.0"
 thiserror = "2.0.18"
-tokio = { version ="1.50.0", features=['macros', 'rt', 'fs']}
-tower-http = { version = "0.6.8", features = ['cors']}
+tokio = { version ="1.52.3", features=['macros', 'rt', 'fs']}
+tower-http = { version = "0.7.0", features = ['cors']}
 
 [dev-dependencies]
-axum-macros = "0.5.0"
+axum-macros = "0.5.1"
 pretty_assertions = "1.4.1"
 tower = { version = "0.5.3", features = ["util"] }
