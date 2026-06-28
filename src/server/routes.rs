@@ -99,7 +99,10 @@ async fn proxy_url(
                 let app_cache = DISK_CACHE.get_or_init(|| Cache::new().with_storage(Storage::Disk));
                 if let Err(e) = app_cache.set(url, html.to_string()).await {
                     error!("Failed to proxy {}: {}", url, e);
-                    return (StatusCode::INTERNAL_SERVER_ERROR, "An error occoured while trying to fetch the preview for {}, our team has been notified.".into());
+                    // Still return the preview.
+                    // The error above should show it is a cache issue.
+                    // This is being tracked in https://github.com/StanleyMasinde/url_expander/issues/33
+                    return (StatusCode::INTERNAL_SERVER_ERROR, html.to_string());
                 };
                 (StatusCode::OK, html.to_string())
             }
