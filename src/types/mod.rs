@@ -34,7 +34,7 @@ pub enum CacheError {
     CacheDirUnavailable,
 
     #[error("An unknown error occurred.")]
-    UknownError,
+    UknownError { message: String },
 }
 
 pub type CacheResult<T> = Result<T, CacheError>;

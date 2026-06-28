@@ -89,7 +89,9 @@ impl Transport for Cache {
                 if let Some(parent) = path_string.parent() {
                     create_dir_all(parent)
                         .await
-                        .map_err(|_| CacheError::UknownError)?;
+                        .map_err(|err| CacheError::UknownError {
+                            message: err.to_string(),
+                        })?;
                 }
 
                 let timestamp = cache_item
@@ -105,7 +107,9 @@ impl Transport for Cache {
                         std::io::ErrorKind::NotFound => {
                             Err(CacheError::FileNotFound { path: path_string })
                         }
-                        _ => Err(CacheError::UknownError),
+                        _ => Err(CacheError::UknownError {
+                            message: err.to_string(),
+                        }),
                     },
                 }
             }
