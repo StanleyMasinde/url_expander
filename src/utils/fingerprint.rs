@@ -20,7 +20,11 @@ pub fn generate_fingerprint<B>(request: &Request<B>) -> String {
     hasher.update(ip);
     hasher.update(user_agent);
 
-    format!("{:x}", hasher.finalize())
+    hasher
+        .finalize()
+        .iter()
+        .map(|b| format!("{:02x}", b))
+        .collect()
 }
 
 #[cfg(test)]

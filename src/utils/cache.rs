@@ -29,7 +29,8 @@ impl Cache {
         let mut hasher = Sha256::new();
         hasher.update(key);
         let hex = hasher.finalize();
-        format!("{:x}", hex)
+
+        hex.iter().map(|b| format!("{:02x}", b)).collect()
     }
 
     #[allow(dead_code)]

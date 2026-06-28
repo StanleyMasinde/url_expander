@@ -23,7 +23,7 @@ pub struct Bucket {
 }
 
 #[derive(Error, Debug)]
-pub(crate) enum CacheError {
+pub enum CacheError {
     #[error("Item not found in cache.")]
     NotFound,
 
