@@ -102,7 +102,7 @@ async fn proxy_url(
                     // Still return the preview.
                     // The error above should show it is a cache issue.
                     // This is being tracked in https://github.com/StanleyMasinde/url_expander/issues/33
-                    return (StatusCode::INTERNAL_SERVER_ERROR, html.to_string());
+                    return (StatusCode::OK, html.to_string());
                 };
                 (StatusCode::OK, html.to_string())
             }
