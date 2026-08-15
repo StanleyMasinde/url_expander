@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc};
 
 use axum::{
-    Router,
+    Json, Router,
     extract::{Query, State},
     middleware,
     response::IntoResponse,
@@ -43,6 +43,8 @@ fn index_routes() -> Router {
     Router::new()
         .route("/", get(index_handler))
         .route("/proxy", get(proxy_url))
+        .route("/youtube", get(youtube_oembed))
+        .route("/reddit", get(reddit_oembed))
         .layer(middleware::from_fn_with_state(limiter.clone(), rate_limit))
         .layer(middleware::from_fn_with_state(
             state.memory_cache.clone(),
@@ -110,5 +112,34 @@ async fn proxy_url(
         }
     } else {
         (StatusCode::BAD_REQUEST, "URL parameter missing".to_string())
+    }
+}
+
+async fn youtube_oembed(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let client = state.client;
+
+    let json = proxy::return_youtube_preview(params.get("url").unwrap(), client)
+        .await
+        .unwrap();
+
+    Json(json)
+}
+
+async fn reddit_oembed(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let client = state.client;
+
+    let Some(url) = params.get("url") else {
+        return (StatusCode::BAD_REQUEST, "URL parameter missing".to_string()).into_response();
+    };
+
+    match proxy::return_reddit_preview(url, client).await {
+        Ok(json) => Json(json).into_response(),
+        Err(error) => handle_reqwest_error(error).into_response(),
     }
 }

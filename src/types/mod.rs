@@ -6,6 +6,7 @@ use std::{
 };
 
 use dashmap::DashMap;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 pub static DISK_CACHE: OnceLock<Cache> = OnceLock::new();
@@ -109,4 +110,18 @@ impl Cacheable for &str {
             last_update: SystemTime::now(),
         }
     }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct OEmbedResponse {
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub author_name: String,
+    #[serde(default)]
+    pub author_url: String,
+    #[serde(default)]
+    pub thumbnail_url: String,
+    #[serde(default)]
+    pub html: String,
 }
