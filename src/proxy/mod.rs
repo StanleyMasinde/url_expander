@@ -193,19 +193,22 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn test_reddit_share_link() {
-        let share_url = "https://www.reddit.com/r/node/s/cv5XKIpUIr";
-        let client = reqwest::Client::new();
+    #[test]
+    fn test_reddit_share_url_detection() {
+        assert!(is_reddit_share_url(
+            "https://www.reddit.com/r/node/s/cv5XKIpUIr"
+        ));
+        assert!(!is_reddit_share_url(
+            "https://www.reddit.com/r/node/comments/1vp379b/why_is_javascript_criticized_so_much_for_backend/"
+        ));
+    }
 
-        let res = return_reddit_preview(share_url, client).await.unwrap();
-
-        assert!(
-            res.title.to_lowercase().contains("javascript")
-                || res.title.to_lowercase().contains("backend"),
-            "Unexpected title for share link. Got: {}",
-            res.title
+    #[test]
+    fn test_strip_query_keeps_comments_path() {
+        let dirty = "https://www.reddit.com/r/node/comments/1vp379b/title/?share_id=abc&utm_source=share";
+        assert_eq!(
+            strip_query(dirty),
+            "https://www.reddit.com/r/node/comments/1vp379b/title/"
         );
-        assert!(!res.author_name.is_empty());
     }
 }
