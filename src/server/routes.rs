@@ -140,6 +140,11 @@ async fn reddit_oembed(
 
     match proxy::return_reddit_preview(url, client).await {
         Ok(json) => Json(json).into_response(),
-        Err(error) => handle_reqwest_error(error).into_response(),
+        Err(proxy::RedditPreviewError::Transport(error)) => {
+            handle_reqwest_error(error).into_response()
+        }
+        Err(proxy::RedditPreviewError::Upstream(message)) => {
+            (StatusCode::UNPROCESSABLE_ENTITY, message).into_response()
+        }
     }
 }

@@ -34,25 +34,71 @@ pub async fn return_youtube_preview(
     Ok(json)
 }
 
+#[derive(Debug)]
+pub enum RedditPreviewError {
+    Transport(reqwest::Error),
+    Upstream(String),
+}
+
+impl From<reqwest::Error> for RedditPreviewError {
+    fn from(error: reqwest::Error) -> Self {
+        Self::Transport(error)
+    }
+}
+
+fn is_reddit_share_url(url: &str) -> bool {
+    url.contains("reddit.com") && url.contains("/s/")
+}
+
+fn strip_query(url: &str) -> String {
+    match reqwest::Url::parse(url) {
+        Ok(mut parsed) => {
+            parsed.set_query(None);
+            parsed.set_fragment(None);
+            parsed.to_string()
+        }
+        Err(_) => url.to_string(),
+    }
+}
+
+/// Share links (/r/sub/s/xxx) 301 to /comments/. Resolve those first.
+async fn resolve_reddit_post_url(
+    post_url: &str,
+    client: &Client,
+) -> Result<String, reqwest::Error> {
+    if !is_reddit_share_url(post_url) && !post_url.contains("://redd.it/") {
+        return Ok(strip_query(post_url));
+    }
+
+    let headers = build_headers(post_url);
+    let resp = client.get(post_url).headers(headers).send().await?;
+    Ok(strip_query(resp.url().as_str()))
+}
+
 /// Reddit's HTML pages are a WAF wall. Fetch oEmbed with the post URL instead.
 pub async fn return_reddit_preview(
     post_url: &str,
     client: Client,
-) -> Result<OEmbedResponse, reqwest::Error> {
+) -> Result<OEmbedResponse, RedditPreviewError> {
+    let resolved = resolve_reddit_post_url(post_url, &client).await?;
     let endpoint = "https://www.reddit.com/oembed";
-    let params = [("url", post_url)];
+    let params = [("url", resolved.as_str())];
     let headers = build_headers(endpoint);
 
-    let json = client
+    let response = client
         .get(endpoint)
         .headers(headers)
         .query(&params)
         .send()
-        .await?
-        .json::<OEmbedResponse>()
         .await?;
 
-    Ok(json)
+    let body = response.text().await?;
+    serde_json::from_str::<OEmbedResponse>(&body).map_err(|_| {
+        RedditPreviewError::Upstream(format!(
+            "Reddit oEmbed did not return JSON for {resolved}: {}",
+            body.chars().take(120).collect::<String>()
+        ))
+    })
 }
 
 #[cfg(test)]
@@ -145,5 +191,21 @@ mod tests {
             "Embed HTML should mention Reddit. Got: {}",
             res.html
         );
+    }
+
+    #[tokio::test]
+    async fn test_reddit_share_link() {
+        let share_url = "https://www.reddit.com/r/node/s/cv5XKIpUIr";
+        let client = reqwest::Client::new();
+
+        let res = return_reddit_preview(share_url, client).await.unwrap();
+
+        assert!(
+            res.title.to_lowercase().contains("javascript")
+                || res.title.to_lowercase().contains("backend"),
+            "Unexpected title for share link. Got: {}",
+            res.title
+        );
+        assert!(!res.author_name.is_empty());
     }
 }
