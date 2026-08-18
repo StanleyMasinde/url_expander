@@ -205,7 +205,8 @@ mod tests {
 
     #[test]
     fn test_strip_query_keeps_comments_path() {
-        let dirty = "https://www.reddit.com/r/node/comments/1vp379b/title/?share_id=abc&utm_source=share";
+        let dirty =
+            "https://www.reddit.com/r/node/comments/1vp379b/title/?share_id=abc&utm_source=share";
         assert_eq!(
             strip_query(dirty),
             "https://www.reddit.com/r/node/comments/1vp379b/title/"
